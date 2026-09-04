@@ -306,7 +306,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/session-end.sh"
+            "command": "~/.claude/hooks/session-end.sh",
+            "timeout": 60
           }
         ]
       }
