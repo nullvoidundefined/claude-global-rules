@@ -22,6 +22,7 @@ stats-cache.json
 tasks/
 telemetry/
 todos/
+uploads/
 
 # Local settings (may contain secrets / machine-specific permissions)
 settings.local.json
@@ -54,3 +55,7 @@ chrome/
 enforce/exempt-repos.txt
 enforce/mcp-database-targets.txt
 enforce/colocated-test-repos.txt
+
+# Per-session user uploads: arbitrary user-supplied files (photos, documents,
+# screenshots) keyed by session id. Never publishable (R-106).
+uploads/
