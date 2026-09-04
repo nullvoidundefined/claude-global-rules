@@ -65,7 +65,19 @@
       "Bash(gh api --method DELETE*)",
       "Bash(gh auth token*)",
       "Bash(gh alias set*)",
-      "Bash(security find-generic-password*)"
+      "Bash(security find-generic-password*)",
+      "Read(//**/.env)",
+      "Read(//**/.env.local)",
+      "Read(//**/.env.*.local)",
+      "Read(//**/.env.development)",
+      "Read(//**/.env.staging)",
+      "Read(//**/.env.production)",
+      "Read(//**/.env.test)",
+      "Read(~/.aws/**)",
+      "Read(~/.ssh/**)",
+      "Read(~/.gnupg/**)",
+      "Read(~/.config/gh/hosts.yml)",
+      "Read(~/.netrc)"
     ],
     "ask": [
       "Bash(git commit --no-verify*)",
