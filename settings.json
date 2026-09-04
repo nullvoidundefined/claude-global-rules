@@ -273,6 +273,15 @@
             "command": "~/.claude/hooks/hook-integrity-check.sh"
           }
         ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/post-compact-rules.sh"
+          }
+        ]
       }
     ],
     "SessionEnd": [
@@ -311,28 +320,6 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/ntfy-notify.sh"
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/pre-compact.sh"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/post-compact-rules.sh"
           }
         ]
       }
