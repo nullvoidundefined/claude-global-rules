@@ -323,6 +323,17 @@
           }
         ]
       }
+    ],
+    "ConfigChange": [
+      {
+        "matcher": "user_settings",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/settings-change-guard.sh"
+          }
+        ]
+      }
     ]
   },
   "enabledPlugins": {
