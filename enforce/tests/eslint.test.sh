@@ -81,6 +81,11 @@ printf 'import { E } from "docx";\n\nimport { A } from "@/data/thing";\n\nimport
 run "$TMP/import-order-ok.ts" || { echo "FAIL: expected external -> alias -> relative import order to pass"; diagnose; exit 1; }
 printf 'import { E } from "docx";\n\nimport { S } from "./sibling";\n\nimport { A } from "@/data/thing";\n' > "$TMP/import-order-bad.ts"
 run "$TMP/import-order-bad.ts" && { echo "FAIL: expected relative-before-alias import order to be flagged"; diagnose; exit 1; } || true
+# The verdict must not depend on the caller's cwd. Run from enforce/, which
+# ships its own eslint.config.mjs: lint.mjs once took the repo root from cwd,
+# so this exact case read as "deferred to local ESLint" and passed silently
+# (the 2026-09-04 flake, reproduced only when the suite ran from enforce/).
+LAST_REPORT=$(cd "$E" && node "$E/lint.mjs" "$TMP/import-order-bad.ts" 2>&1) && { echo "FAIL: import order verdict changed with the caller's cwd (repo root must come from the file, not cwd)"; diagnose; exit 1; } || true
 # Prettier's @trivago layout keeps a "next" type import adjacent to and before
 # its "next/link" subpath with no blank line; the gate must accept that instead
 # of demanding "next/link" first (the deadlock the pathGroups reconcile).

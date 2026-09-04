@@ -12,7 +12,7 @@
 import { ESLint } from "eslint";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { buildEslintOptions } from "./eslintOptions.mjs";
 
 // --added-only <base>: report only violations on lines the diff base..HEAD ADDS.
@@ -49,7 +49,27 @@ function isLineAdded(ranges, line) {
   return ranges.some(([start, end]) => line >= start && line <= end);
 }
 
-const repoRoot = process.cwd();
+/**
+ * The repo that owns the first file, not the caller's cwd. The gate and the
+ * fixtures both hand this script absolute paths, and the deferred-rule filter
+ * below asks "does THAT repo ship its own ESLint config"; cwd answered for the
+ * wrong repo whenever the caller sat elsewhere (the 2026-09-04 "flake": run
+ * from enforce/, whose eslint.config.mjs made the fixture's import-order case
+ * read as deferred and pass silently). Outside any repo the file's own
+ * directory stands in, so the answer still follows the file.
+ */
+function resolveRepoRoot(firstFile) {
+  try {
+    return execFileSync("git", ["-C", dirname(firstFile), "rev-parse", "--show-toplevel"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return dirname(firstFile);
+  }
+}
+
+const repoRoot = resolveRepoRoot(files[0]);
 const eslint = new ESLint(buildEslintOptions(repoRoot));
 const results = await eslint.lintFiles(files);
 
