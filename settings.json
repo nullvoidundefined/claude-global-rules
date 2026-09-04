@@ -112,31 +112,38 @@
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/push-eslint-gate.sh"
+            "command": "~/.claude/hooks/push-eslint-gate.sh",
+            "if": "Bash(git *)"
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/push-ruff-gate.sh"
+            "command": "~/.claude/hooks/push-ruff-gate.sh",
+            "if": "Bash(git *)"
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/push-rubocop-gate.sh"
+            "command": "~/.claude/hooks/push-rubocop-gate.sh",
+            "if": "Bash(git *)"
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/push-golangci-gate.sh"
+            "command": "~/.claude/hooks/push-golangci-gate.sh",
+            "if": "Bash(git *)"
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/constant-change-guard.sh"
+            "command": "~/.claude/hooks/constant-change-guard.sh",
+            "if": "Bash(git *)"
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/audit-signal-check.sh"
+            "command": "~/.claude/hooks/audit-signal-check.sh",
+            "if": "Bash(git *)"
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/llm-rule-judge.sh"
+            "command": "~/.claude/hooks/llm-rule-judge.sh",
+            "if": "Bash(git *)"
           },
           {
             "type": "command",
@@ -146,7 +153,8 @@
             "type": "command",
             "command": "~/.claude/hooks/build-cheatsheets.sh",
             "timeout": 60,
-            "statusMessage": "Rebuilding feature cheat sheets"
+            "statusMessage": "Rebuilding feature cheat sheets",
+            "if": "Bash(git *)"
           }
         ]
       },
