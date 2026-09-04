@@ -2,13 +2,13 @@
 
 ## 1. Last commit
 
-- `7b55cdf` fix(enforce): generate the R-316 verb lists from the registry (#3)
-- On `main`. Both PRs merged: #2 (`b1a1241`) and #3 (`7b55cdf`). No open PRs, no open branches.
+- `04dd4f5` feat(plugins): enable i-have-adhd always-on across every session (#5)
+- Merged from this session's work: #2 (`b1a1241`) and #3 (`7b55cdf`). Landed separately afterwards, not from this session: #4 (`bd604c7`, install-git-hooks now upgrades a superseded pre-push in place instead of refusing, with a fixture) and #5 (`04dd4f5`).
 
 ## 2. Production state
 
 - **Live.** Merged, pulled to `~/.claude`, dependencies installed, git hooks installed, and `/context` and `/hooks` run and confirmed by Ian. This is the one thing the session could not verify itself: the work was done in a remote container where the repo sits outside `~/.claude`, so `settings.json` was never loaded by the session that wrote it.
-- Both fixture suites green: 38 enforcement, 11 hook. Green in CI on `main` (`.github/workflows/enforce.yml`, job `fixtures`).
+- Both fixture suites green: 38 enforcement, 12 hook. Green in CI on `main` (`.github/workflows/enforce.yml`, job `fixtures`). The twelfth hook fixture arrived with #4.
 - Also shipped, in `nullvoidundefined/doppelscript`: `88cee3c` cuts GitHub Actions spend (see section 4).
 
 ## 3. What shipped
