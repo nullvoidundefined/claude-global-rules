@@ -66,6 +66,7 @@
     { "id": "R-801", "tier": "advisory", "enforcer": "hook:audit-signal-check", "severity": "warn", "autofix": false },
     { "id": "R-904", "tier": "advisory", "enforcer": "hook:audit-signal-check", "severity": "warn", "autofix": false },
     { "id": "R-506", "tier": "advisory", "enforcer": "hook:commit-message-guard", "severity": "warn", "autofix": false },
-    { "id": "R-330", "tier": "advisory", "enforcer": "hook:spec-glossary-check", "severity": "warn", "autofix": false }
+    { "id": "R-330", "tier": "advisory", "enforcer": "hook:spec-glossary-check", "severity": "warn", "autofix": false },
+    { "id": "R-509", "tier": "regex", "enforcer": "hook:verification-gate", "severity": "error", "autofix": false, "note": "Stop-event gate; runs the project's discovered test/typecheck commands when the tree is dirty, fails open when none is discoverable" }
   ]
 }

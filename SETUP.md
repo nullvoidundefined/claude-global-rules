@@ -58,3 +58,23 @@ Run BOTH fixture suites; all tests should pass:
 bash ~/.claude/enforce/tests/run-tests.sh
 bash ~/.claude/hooks/tests/run-tests.sh
 ```
+
+The ESLint-backed tests in the first suite need `enforce/node_modules`, which is
+gitignored and therefore absent from a fresh clone. Run `npm install` in
+`~/.claude/enforce` first, or six tests fail on a missing ESLint.
+
+## The turn-level verification gate (R-509)
+
+`hooks/verification-gate.sh` runs on `Stop` and blocks the turn from ending on a
+red suite. It discovers this project's own checks rather than hardcoding any,
+first match wins: `.claude/verify.sh`, then the `~/.claude` repo's two fixture
+suites, then `package.json` `test` plus `typecheck`/`type-check`, then
+`pytest`/`mypy`, then `go test`/`go vet`, then `bundle exec rspec`.
+
+- It runs only when the working tree is dirty or the branch carries unpushed
+  commits, so read-only turns cost nothing.
+- A repo with no discoverable check command is never blocked.
+- To give a project its own command, write `.claude/verify.sh` in its root. That
+  wins over all discovery, so per-project commands never belong in the hook.
+- `CLAUDE_SKIP_VERIFY=1` bypasses for one turn. `CLAUDE_VERIFY_TIMEOUT` (default
+  600s) caps each command.
