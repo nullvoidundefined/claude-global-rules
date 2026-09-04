@@ -25,11 +25,32 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: enforce/package-lock.json
 
       # node_modules is gitignored, so a fresh clone has none and the six
       # ESLint-backed fixtures fail on a missing ESLint rather than on a defect.
       - name: Install enforcement dependencies
         run: npm ci --prefix enforce || npm install --prefix enforce
+
+      # push-ruff-gate.test.sh drives the REAL ruff binary. The rubocop and
+      # golangci fixtures stub their linters through CLAUDE_*_CMD, so they pass
+      # on a bare runner; the ruff one does not, and the first CI runs failed on
+      # "no ruff or uvx on PATH" rather than on any defect. Stubbing ruff to
+      # match the other two would make the suite hermetic at the cost of no
+      # longer checking that enforce/ruff-enforce.toml actually selects
+      # PLR2004/E731/ANN401, so CI provides the binary instead.
+      #
+      # Pinned: an unpinned ruff would let an upstream release change rule
+      # behavior and turn CI red with no commit to blame. Bump deliberately, and
+      # keep it in step with the maintainer's local ruff.
+      - name: Install ruff (required by push-ruff-gate.test.sh)
+        run: |
+          pipx install ruff==0.15.8
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Confirm ruff resolves
+        run: ruff --version
 
       - name: Install the checkout at ~/.claude
         run: |
