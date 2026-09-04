@@ -4,6 +4,7 @@
 # Ephemeral / machine-specific state
 .last-cleanup
 .session-locks/
+.verify-memo/
 backups/
 cache/
 debug/
