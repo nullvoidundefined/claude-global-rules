@@ -1,61 +1,43 @@
-# Session Handoff: 2026-09-04 Configuration Audit and Determinism Pass
+# Session Handoff: 2026-09-04 Configuration Audit (follow-up)
 
 ## 1. Last commit
 
-- `0b25e96` chore(repo): ignore per-session uploads (#7)
-- Merged from this session's work: #2 (`b1a1241`), #3 (`7b55cdf`) and #6 (`e5b9da3`). Landed separately: #4 (`bd604c7`, install-git-hooks upgrades a superseded pre-push in place instead of refusing, with a fixture), #5 (`04dd4f5`) and #7 (`0b25e96`).
-- In `nullvoidundefined/doppelscript`: #359 (`88cee3c`), #361 and #363 (`f95414f`).
+- `c2dd7c5` docs(session-handoff): close the /feature-cleanup item and record the e2e flake (#8), on `main`.
+- This session's work is on `claude/config-audit-8m7s5k`: the audit report, the ISSUES.md rows, and this handoff, in one commit. No PR opened; none was asked for.
 
 ## 2. Production state
 
-- **Live.** Merged, pulled to `~/.claude`, dependencies installed, git hooks installed, and `/context` and `/hooks` run and confirmed by Ian. This is the one thing the session could not verify itself: the work was done in a remote container where the repo sits outside `~/.claude`, so `settings.json` was never loaded by the session that wrote it.
-- Both fixture suites green: 38 enforcement, 12 hook. Green in CI on `main` (`.github/workflows/enforce.yml`, job `fixtures`). The twelfth hook fixture arrived with #4.
-- Also shipped, in `nullvoidundefined/doppelscript`: `88cee3c` cuts GitHub Actions spend (see section 4).
+- Unchanged. The session was read-only against the config: no hook, rule, or settings change shipped. Both fixture suites green on a fresh install in the remote container (38 enforcement, 12 hook); `hook-integrity-check.sh` silent.
+- The remote container cannot see the maintainer's `~/.claude` runtime (plugins, `projects/`, plan type, CLI version), so every "to confirm" in the report that names `/context`, `/status`, `/doctor`, `/skill-doctor`, or `claude --version` is a local check.
 
 ## 3. What shipped
 
-**doppelscript `/feature-cleanup` step 6, fixed (#363, merged).** The step could never remove a branch, for four independent reasons rather than the one first recorded: it gated on `git branch --merged`, which a squash merge never satisfies; it then deleted with `git branch -d`, which refuses for the same ancestry reason; the whole step sat inside "if a worktree is found", so branches without a worktree were never considered at all; and it deleted only the local branch. It now confirms merge state from the PR, refuses to delete what it cannot confirm, and removes the remote branch too. It keys on `mergedAt` rather than `merged`, because the PR list endpoint populates the timestamp and leaves the boolean false, so a check written against `.merged` reads correctly in review and then silently never fires.
+**`docs/audits/2026-09-04-config.md`.** Audit of the config against the Anthropic docs fetched today, the Claude Code changelog 2.1.160 to 2.1.261, the npm and PyPI registries, the Actions runtimes, the live plugin marketplace manifest, and community reports (confidence marked per claim). Four P1s, nine P2s, six P3s, and a probed-and-cleared list. The P2s and P3s are in `ISSUES.md`.
 
-**Turn-level test gate (R-509).** `hooks/verification-gate.sh`, a `Stop` hook. Discovers the project's own checks (`.claude/verify.sh`, then this repo's two suites, then `package.json` test/typecheck, pytest/mypy, go test/vet, rspec). Runs only when the tree is dirty or the branch carries unpushed commits. Silent on success; blocks with the failing command's real output. Fails open when nothing is discoverable. `CLAUDE_SKIP_VERIFY=1` bypasses. Closes the hole where four push gates linted and nothing ran tests.
-
-**Naming as data (R-316, R-317).** `enforce/lexicon.json` plus `enforce/rules/naming-lexicon.mjs`. Decides verb membership, the mandatory noun, banned synonyms with their canonical replacement, boolean prefixes, and the glossary head noun. Read and persistence verbs are bound to the R-304 layer that gives them meaning (`fetch` under clients/api, `load` under repositories/database/config/prompts, `get` elsewhere; `insert`/`upsert`/`drop` reserved to the persistence trees), so synonyms cannot be freely substituted. Opt-in per repo via the `naming` key in `.enforce.json`.
-
-**The registry is the single source.** `enforce/renderLexiconSpec.mjs` generates the R-316 verb lists in `rulebook/reference.md` between `<!-- lexicon:begin -->` markers. `--check` fails on divergence, `--write` reconciles and is idempotent. `validateLexicon()` additionally rejects a registry that contradicts itself (a banned verb still bound to a layer by `verbGroups` or `scopeVerbs`). Covered by `lexicon-spec-sync.test.sh`.
-
-**Long-term drift (the ratchet).** `enforce/ratchet.mjs`. Full-tree counts per rule against a committed `.enforce-baseline.json`; fails when a count rises. Sorted keys, no timestamp, so repeated runs are byte-identical. `--update` locks in; `--strict` also fails on unlocked improvements.
-
-**Two rules off the judge.** `enforce/rules/destructure-object-reads.mjs` (R-325, default-on) and `enforce/rules/file-header-comment.mjs` (R-320, opt-in via `fileHeaders`). Both were previously decided by nothing.
-
-**Two rules honestly reclassified.** R-318 and R-322 left the llm-judge tier. Both are undecidable; the only deterministic checks available are proxies that enforce a different rule under the original rule's id. R-318 is now `[manual]`, R-322 keeps its advisory nudge. The judge tier is now exactly R-315, R-316, R-317.
-
-**CLAUDE.md pruned.** 118 lines / 15,129 chars to 100 lines / 11,738 chars. 17 conditional rules moved to the new `structure-conventions` skill, every one still caught mechanically at the tool call. `claude-md-lint.test.sh` extended: a norm line may live in `CLAUDE.md` or a skill, and a rule carried in both now fails.
-
-**New agent and skills.** `agents/spec-conformance-review.md` (diff against a named spec, R-804 output discipline, literal "No gaps found."). `skills/spec-grounding` (grounds an externally written spec via read-only subagents). `skills/structure-conventions`.
-
-**CI and the pre-push installer.** `.github/workflows/enforce.yml` (the repo had no CI at all). `hooks/pre-push.sample` plus `hooks/install-git-hooks.sh`, replacing SETUP.md step 3's prose description of a script that did not exist in the checkout.
-
-**README reconciled.** Nine pre-existing errors fixed, including `enforce/` missing from the layout entirely and a `global-memory/user_profile.md` that has never existed in git history.
+The P1s, in one line each:
+- `session-end.sh` has no `timeout`; the docs now give `SessionEnd` a shared 1.5-second budget. The R-603 rollup can be killed silently on any machine with a populated `projects/` tree.
+- Post-compaction re-injection uses a global sentinel file and a `UserPromptSubmit` hook; the docs provide `SessionStart` with `matcher: compact`, and everything `session-start.sh` injects is summarized away at compaction. The hand-copied rule list in `post-compact-rules.sh` has drifted from `CLAUDE.md`.
+- `settings.json` starts on `opus[1m]` while the HARD RULE memory, R-903, and the post-compaction list say Sonnet. Sonnet 5 is native 1M; `opusplan` exists.
+- The secret read side is still honor-system; the docs ship `Read(...)` deny rules that also cover `cat`, `head`, `tail`, `sed` in Bash.
 
 ## 4. Pending
 
-**Outstanding, user-side:**
-- Name the `fixtures` job as a required status check under branch protection (Settings > Branches). Without it the ratchet is advisory, since a local hook is `--no-verify`-able. Green on six commits, so it will not block.
-- Delete the merged branches still on both remotes, and turn on Settings > General > Automatically delete head branches so it stops recurring. This session's git proxy returns 403 on delete-ref and rejects force-push, so it cannot do either.
-- doppelscript issue #364: `e2e/navigation.spec.ts` flakes on `main` through `waitUntil: 'networkidle'`. The fix is one line and is written out in the issue; it is application test code, so it was not folded into #363.
+**Decisions only the maintainer can make (each is one line in a file):**
+- P1-3: Sonnet, `opusplan`, or Opus, recorded in whichever artifact loses.
+- P2-1: `permissions.defaultMode`, explicit.
+- P2-9: keep or drop the `code-review` and `code-simplifier` plugins once `/skill-doctor` reports what they cost.
 
-**Adoption, per project (~15 min each):**
-- Add the `.enforce.json` keys wanted (`naming` with a `glossary`, `fileHeaders`, `importZones`). Omitting `glossary` skips head-noun checking rather than passing it.
-- `node ~/.claude/enforce/ratchet.mjs --update`, commit `.enforce-baseline.json`. Expect a large first baseline; that is the design.
+**Time-boxed by an external date:**
+- P2-3: `actions/checkout@v4` and `actions/setup-node@v4` run on `node20`, removed from hosted runners 2026-09-23. Nineteen days from the audit.
 
-**Untested, and only a real event will settle it:**
-- doppelscript's Dependabot e2e skip. Every check on PR #359 ran as the maintainer, not as `dependabot[bot]`, so only the normal path is proven. The first real Dependabot PR tests whether a skipped job satisfies the required checks. If it blocks, delete the one `if:` in `ci.yml`.
+**Mechanical, fixture-covered, safe to do in one sitting:**
+- P1-1 `timeout` on the `SessionEnd` entry; P1-2 `compact` matcher and sentinel removal (update `post-compact-rules.test.sh`, `hook-hashes.txt`); P1-4 `Read` deny rules; P2-2 allow-list collapse; P2-4 ESLint 10 and `import-x`; P2-7 derive the latency chain from `settings.json`; P3-4 and P3-5 wording.
 
-**Open, unreproduced:**
-- `enforce/tests/eslint.test.sh` failed once on the first run after a cold install and has passed every run since. The cold-`node_modules` hypothesis was tested directly (delete, reinstall, run immediately, twice) and eliminated. The one condition not reproduced is that the original install was network-bound at 5 minutes against 4 seconds warm, which points at contention during that install. Not worth more time without a second sighting.
+**Still open from earlier sessions:** branch protection naming `fixtures` as required; deleting merged remote branches; the judge keychain step (now P2-6, with the `agent`-hook alternative written up).
 
 ## 5. Next-session tasks, with files to read
 
-- **First real adoption of the lexicon.** Read `enforce/README.md` ("The naming lexicon"), pick one project, write its `glossary`, run the ratchet.
-- **Do not mechanize R-318 or R-322.** The reasoning is recorded in each rule's Spec in `rulebook/reference.md`. A line-count proxy enforces a different rule than the one written, under that rule's id.
-- **Do not hand-edit the R-316 verb bullets** in `rulebook/reference.md`. They are generated; change `enforce/lexicon.json` and run `node enforce/renderLexiconSpec.mjs --write`. The suite fails if they diverge.
-- **When adding an enforcer,** R-516 still binds: a `manifest.json` entry naming tier and enforcer, plus a fixture under `enforce/tests/`. The manifest closure test will say so if you forget.
+- **Start with P1-1 and P1-2** (`settings.json`, `hooks/session-end.sh`, `hooks/pre-compact.sh`, `hooks/post-compact-rules.sh`, `hooks/session-start.sh`, `hooks/tests/post-compact-rules.test.sh`). Read the report's "to confirm" lines first; the compaction one needs a `/compact` in a throwaway session and `/context` afterwards before deciding whether `post-compact-rules.sh` survives at all.
+- **Then P2-3 before 2026-09-23** (`.github/workflows/enforce.yml`): both actions to v7, ruff to current, `permissions:` block, `dependabot.yml`.
+- **Do not hand-edit the R-316 verb bullets** in `rulebook/reference.md`; they are generated from `enforce/lexicon.json`.
+- **When adding an enforcer,** R-516 still binds: manifest entry plus fixture. `enforcement-guard-check.sh` matches enforcers by `.command` path, so a `type: agent` hook (P2-6) needs that check extended before it counts as registered.
