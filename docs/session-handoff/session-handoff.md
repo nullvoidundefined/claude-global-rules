@@ -37,7 +37,7 @@
 
 **Outstanding, user-side:**
 - Name the `fixtures` job as a required status check under branch protection (Settings > Branches). Without it the ratchet is advisory, since a local hook is `--no-verify`-able. Green on six commits, so it will not block.
-- doppelscript: `88cee3c` is merged but its `CLAUDE.md` line 33 asks for `/feature-cleanup` after a squash merge, which was not run.
+- doppelscript: `/feature-cleanup` was run for `88cee3c`; the handoff addendum is PR #361. It found that step 6 of that skill is inert in a squash-merge repo (it gates branch removal on `git branch --merged`, which never reports a squash-merged branch), and that `claude/actions-cost-reduction` could not be deleted because this session's git proxy returns 403 on delete-ref. The branch is still on the remote and is safe to delete from the UI.
 
 **Adoption, per project (~15 min each):**
 - Add the `.enforce.json` keys wanted (`naming` with a `glossary`, `fileHeaders`, `importZones`). Omitting `glossary` skips head-noun checking rather than passing it.
