@@ -134,9 +134,9 @@ Structured logs via lograge (JSON). No secrets or PII (R-102, R-104). Tag reques
 ## Observability (R-341 to R-346 in Rails form)
 
 - R-341: `ActionDispatch::RequestId` honors `X-Request-Id` and sets it on the response; `config.log_tags = [:request_id]` puts it on every line; jobs log with the job ID in the same role.
-- R-342: `Rails.logger.info(event: "note_loaded", note_id: note.id)` through lograge's custom payload, never string interpolation of values into the message and never `puts` in app code.
+- R-342: `Rails.logger.info(event: "note_loaded", note_id: note.id)` through lograge's custom payload, never string interpolation of values into the message and never `puts` in app code; manual, since `Rails/Output` needs the rubocop-rails extension the gate does not bundle.
 - R-343: one `app/clients/analytics.rb` wraps the provider; event names are constants in `app/analytics/events.rb`, never a literal at the call site.
-- R-344: every `rescue` names the exception and logs or re-raises it; `rescue => e` followed by nothing is a defect (`Lint/SuppressedException` in `enforce/rubocop-enforce.yml`).
+- R-344: every `rescue` names the exception and logs or re-raises it; an empty `rescue` body is a defect (`Lint/SuppressedException` in `enforce/rubocop-enforce.yml`); a bound-but-unused exception stays manual.
 - R-345: `/health` and `/health/ready` routes registered before application routes.
 - R-346: every client call sets a timeout, logs provider, operation, duration, and outcome, and forwards the request ID.
 

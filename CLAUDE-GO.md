@@ -129,8 +129,8 @@ Raw SQL pairs via golang-migrate; write defaults directly in SQL (`DEFAULT 'acti
 ## Observability (R-341 to R-346 in Go form)
 
 - R-341: middleware reads `X-Request-Id` or mints one, writes it to the response, and stores it in `context.Context`; handlers and services log through `slog` with the ID taken from the context (`slog.With("request_id", id)`), never as a parameter threaded by hand.
-- R-342: `slog` with structured attributes (`slog.Info("note loaded", "note_id", id)`), never `fmt.Println` or `log.Printf` with formatted values in service code.
+- R-342: `slog` with structured attributes (`slog.Info("note loaded", "note_id", id)`), never `fmt.Println` or `log.Printf` with formatted values in service code; manual, no golangci linter is bundled for it.
 - R-343: one `clients/analytics` package wraps the provider; event names are constants in `analytics/events.go`, never a literal at the call site.
-- R-344: every error return is handled or wrapped with `%w`; `_ = err` and an empty `if err != nil {}` are defects; `errcheck` and `errorlint` in `enforce/golangci-enforce.yml` cover the syntactic half.
+- R-344: every error return is handled or wrapped with `%w`; `_ = err` and an empty `if err != nil {}` are defects; `errcheck` and `errorlint` in `enforce/golangci-enforce.yml` cover the unhandled-return and wrapping halves (the config is v2 schema; a v1 file was silently ignored by v2 binaries until 2026-09-04).
 - R-345: `/health` and `/health/ready` on every service and worker, registered first.
 - R-346: every client call uses a `context.WithTimeout`, logs provider, operation, duration, and outcome, and forwards the request ID on outbound HTTP.

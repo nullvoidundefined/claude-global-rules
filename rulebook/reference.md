@@ -347,7 +347,7 @@ R-342: Log through the one structured logger in server code, never `console`; co
   - Call shape is `logger.<level>({ ...context }, "message")`; a bare message with no context is allowed; a message with interpolated values is not, and a context object after the message is a defect (Pino drops it).
   - Errors travel as `{ err }`; identifiers travel as fields (`userId`, `linkId`, `durationMs`), never inside the message string.
   - Levels: `debug` for developer detail, `info` for one line per request and per job, `warn` for handled anomalies, `error` for failures that need a human; no secrets or PII in any field (R-102, R-104).
-  Enforcement: eslint:no-console (scoped to the server trees); eslint:structured-log-call (decides an interpolated message and an object-after-message; the request-ID field itself is R-341, manual)
+  Enforcement: eslint:no-console (scoped to the server trees); eslint:structured-log-call (decides an interpolated message and an object-after-message; the request-ID field itself is R-341, manual); ruff:T201 (Python analog, print in service code; scripts, bin, cli, and tests exempt); Go and Ruby: manual
 
 R-343: Emit analytics events through one module, from a checked-in registry, never a string literal at the call site.
   Scope: server-side product analytics (PostHog, Segment, or the project's provider); frontend analytics follow the same shape through the frontend's `clients/analytics`.
@@ -364,7 +364,7 @@ R-344: Never swallow an error.
   - A `catch` binds the error and references it: log with `{ err }` and the request ID, report to the error tracker when the failure is unexpected, then return an error response or rethrow with the original as `cause`.
   - Expected failures (a cache miss, a 404 from a provider) log at `debug` or `warn` and return a defined fallback; they are still bound and referenced.
   - The global error handler is the one place an unexpected error becomes a 500, and it reports before it responds.
-  Enforcement: eslint:no-empty (`allowEmptyCatch: false`); eslint:no-swallowed-catch (decides an unbound `catch` and a bound-but-unreferenced error; what the block does with the error is not decidable and stays manual)
+  Enforcement: eslint:no-empty (`allowEmptyCatch: false`); eslint:no-swallowed-catch (decides an unbound `catch` and a bound-but-unreferenced error; what the block does with the error is not decidable and stays manual); ruff:E722, ruff:S110, ruff:BLE001 (Python analogs; a blind except that re-raises passes); golangci:errcheck, golangci:errorlint (Go analogs); rubocop:Lint/SuppressedException (Ruby analog)
 
 R-345: Expose liveness and readiness probes on every service and worker.
   Spec:
