@@ -42,9 +42,9 @@ R-308: Search the existing `services/`, `clients/`, and hook trees before adding
 R-315: Name files for their specific responsibility, predictable without opening them: `generatePublicNote.ts`, not `generate.ts`. [judge]
 R-316: Name functions verb + noun (the noun is mandatory); one verb lexicon across the codebase; booleans take `is`/`has`/`can`/`should`. [eslint:lexicon-naming, judge]
 R-317: Name variables descriptively: no generic names, no bare adjectives (`scoredJob`, not `scored`), plural nouns for collections; every name reads as natural English. [eslint:lexicon-naming, judge]
-R-318: One responsibility per file; size is a smell, not a hard cap. [judge]
+R-318: One responsibility per file; size is a smell, not a hard cap. [manual]
 R-320: Write a file-level header comment on every new source file (skip tests, `.d.ts`, barrels, single-constant files, pure re-exports). [eslint:file-header-comment, hook:new-file-header-reminder]
-R-322: Every function is exactly one of: an orchestrator that only sequences calls, or an atomic function doing one indivisible piece (~10 lines, ~25 ceiling). [judge, hook:clean-code-reminder]
+R-322: Every function is exactly one of: an orchestrator that only sequences calls, or an atomic function doing one indivisible piece (~10 lines, ~25 ceiling). [hook:clean-code-reminder]
 R-325: Destructure when reading 2+ properties of an object; never destructure a method off its object. [eslint:destructure-object-reads, judge]
 R-330: Settle the domain vocabulary during spec writing; the spec carries a `## Domain vocabulary` glossary that all file, function, and type naming draws from. [hook:spec-glossary-check]
 

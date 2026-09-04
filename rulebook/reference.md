@@ -236,8 +236,10 @@ R-317: Name variables descriptively; never abbreviate where the full word reads 
   Enforcement: eslint:lexicon-naming (plural collections, bare adjectives); judge for the rest
 
 R-318: Give each file one responsibility; split when it serves more than one concern.
-  Spec: size is a smell, not a hard cap; the filename (R-315) names the single responsibility.
-  Enforcement: judge
+  Spec:
+  - Size is a smell, not a hard cap; the filename (R-315) names the single responsibility.
+  - Not mechanized, deliberately (2026-09-04 reclassification). "One responsibility" is undecidable. The only deterministic checks available are proxies (line count, cyclomatic complexity, fan-out), and a proxy enforces a different rule than the one written here while reporting under this rule's id. Taken off the llm-judge tier for the same reason: a non-deterministic verdict on an undecidable property is confidence theater, not enforcement. This rule depends on recall, and `[manual]` is the honest label for that. Do not add a proxy and call it enforcement.
+  Enforcement: manual (undecidable; see the Spec)
 
 R-319: Export exactly one public function per module across the `services/`, `api/`, and `clients/` trees.
   Scope: strengthens R-318 for the function-module trees; does not change orchestrator-plus-private-helper colocation (R-322), where the helpers serve that one exported orchestrator.
@@ -271,7 +273,8 @@ R-322: Write every function as exactly one of two kinds: an orchestrator that on
   - Atomic: decomposes no further; targets ~10 lines and treats ~25 as a ceiling that demands justification (a flat switch or config map is fine; tangled logic is not).
   - Both defects refactor by extracting named functions: raw logic mixed into orchestration, or an atomic function grown into several steps.
   - Name every function verb-noun (R-315/R-316), order caller above callee (R-321), export only the composed entry point (R-307); helpers stay unexported.
-  Enforcement: judge; hook:clean-code-reminder (advisory)
+  - Not mechanized beyond the advisory nudge, deliberately (2026-09-04 reclassification). The orchestrator/atomic distinction is undecidable, and the ~10/~25 line targets are a proxy for it. `hook:clean-code-reminder` reports that proxy honestly, as a non-blocking nudge naming the line ceiling rather than claiming to have judged composition. Promoting it to a blocking gate would enforce "short functions" under this rule's id, which is not what this rule says: an orchestrator may be as long as the flow requires. Taken off the llm-judge tier because a non-deterministic verdict on an undecidable property is confidence theater, not enforcement.
+  Enforcement: hook:clean-code-reminder (advisory nudge on the line-count proxy only); the orchestrator/atomic distinction itself is undecidable and depends on recall
 
 R-323: Sort sibling keys deterministically wherever order is semantically free; default alphabetical.
   Spec:

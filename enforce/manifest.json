@@ -60,8 +60,6 @@
     { "id": "R-317", "tier": "ast", "enforcer": "eslint:lexicon-naming", "severity": "error", "autofix": false, "note": "the decidable half only (plural collections, bare adjectives); same opt-in as R-316" },
     { "id": "R-316", "tier": "llm-judge", "enforcer": "hook:llm-rule-judge", "severity": "error", "autofix": false },
     { "id": "R-317", "tier": "llm-judge", "enforcer": "hook:llm-rule-judge", "severity": "error", "autofix": false },
-    { "id": "R-322", "tier": "llm-judge", "enforcer": "hook:llm-rule-judge", "severity": "warn", "autofix": false },
-    { "id": "R-318", "tier": "llm-judge", "enforcer": "hook:llm-rule-judge", "severity": "warn", "autofix": false },
     { "id": "R-505", "tier": "regex", "enforcer": "hook:commit-message-guard", "severity": "error", "autofix": false },
     { "id": "R-504", "tier": "advisory", "enforcer": "hook:task-commit-reminder", "severity": "warn", "autofix": false },
     { "id": "R-513", "tier": "advisory", "enforcer": "hook:constant-change-guard", "severity": "warn", "autofix": false },
