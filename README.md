@@ -101,7 +101,7 @@ The design goal is to migrate prose down to mechanical as enforcement paths get 
 │   ├── verification-gate.sh         # Stop. Blocks the turn on a red test/typecheck run.
 │   ├── install-git-hooks.sh         # Installs pre-push.sample into .git/hooks.
 │   ├── pre-push.sample              # Tracked pre-push: a red suite aborts the push.
-│   ├── tests/                       # 11 fixture tests for the lifecycle hooks.
+│   ├── tests/                       # 12 fixture tests for the lifecycle hooks.
 │   └── ...                          # 31 more gates; each self-documenting in its header.
 ├── enforce/                         # The mechanical enforcement surface.
 │   ├── manifest.json                # Rule id -> tier + enforcer. Single source of truth.
@@ -216,8 +216,8 @@ This repo is installed at `~/.claude/` and tracked by git. To bootstrap:
 2. Ensure Claude Code is installed.
 3. Verify `jq`, `node`, and `python3` are available (`brew install jq node` on macOS); the hooks depend on all three. Then `npm install --prefix enforce`: `enforce/node_modules` is gitignored, so a fresh clone has none and the six ESLint-backed fixtures fail on a missing ESLint rather than on a real defect.
 4. Verify `settings.json` hook paths resolve on your system. The hooks use `~/.claude/hooks/...` which assumes the repo is at `~/.claude/`.
-5. Install the git hook: `bash hooks/install-git-hooks.sh`, which writes `.git/hooks/pre-push` from the tracked `hooks/pre-push.sample` and refuses to clobber a pre-push it did not write. Regenerate the integrity manifest after any intentional change to a hook, a custom ESLint rule, or the lexicon: `hooks/hook-integrity-check.sh --update`.
-6. Run a dry test: `bash enforce/tests/run-tests.sh && bash hooks/tests/run-tests.sh` (48 fixture tests), then start a session and confirm the `SessionStart` hook emits the global memory INDEX. Try a Write call containing U+2014 and confirm it blocks.
+5. Install the git hook: `bash hooks/install-git-hooks.sh`, which writes `.git/hooks/pre-push` from the tracked `hooks/pre-push.sample` and refuses to clobber a pre-push it did not write, naming the exact `mv` to run if you want it replaced. The one hook it replaces without asking is its own superseded predecessor, identified by that hook's header and backed up to `pre-push.legacy.bak` first. Regenerate the integrity manifest after any intentional change to a hook, a custom ESLint rule, or the lexicon: `hooks/hook-integrity-check.sh --update`.
+6. Run a dry test: `bash enforce/tests/run-tests.sh && bash hooks/tests/run-tests.sh` (49 fixture tests), then start a session and confirm the `SessionStart` hook emits the global memory INDEX. Try a Write call containing U+2014 and confirm it blocks.
 7. Recalibrate to yourself: R-906 (estimation) lives in `rulebook/cost.md`, R-903 (model routing) beside it, and the collaboration preferences are the `global-memory/feedback_*.md` files. `SETUP.md` covers which of those to keep, edit, or truncate on a fresh install.
 
 The runtime directories (`sessions/`, `cache/`, `history.jsonl`, `paste-cache/`, `shell-snapshots/`) are gitignored and populated by Claude Code as you work.
