@@ -6,7 +6,7 @@ Project-level `CLAUDE.md` adds guidance but does not override these unless it ex
 
 ## Session init (R-0xx)
 
-R-001: Run the session-start procedure before any other work: (1) read `~/.claude/global-memory/INDEX.md`; (2) classify the session type per `rules/session-types.md`; (3) read that type's Tier 2 files; (4) `git status -s ~/.claude`, triage non-empty; (5) read `docs/session-handoff/session-handoff.md` if present, verifying its SHA against `git log`; (6) read the project `CLAUDE.md`. First line of the response after the reads: `Session: <type> | Loaded: <files or "core only"> | Skipped: <files>`. Re-read and re-declare on reclassification. [manual]
+R-001: Run the session-start procedure before any other work: (1) confirm the SessionStart hook injected `~/.claude/global-memory/INDEX.md` and the SHA-verified `docs/session-handoff/session-handoff.md`; Read either only if its block is absent; (2) classify the session type per `rules/session-types.md`; (3) read that type's Tier 2 files; (4) `git status -s ~/.claude`, triage non-empty; (5) read the project `CLAUDE.md`; auto memory (`MEMORY.md`) loads on its own. First line of the response after the reads: `Session: <type> | Loaded: <files or "core only"> | Skipped: <files>`. Re-read and re-declare on reclassification. [manual]
 R-002: Load the R-001 files at session start; run the reads in parallel where possible. [manual]
 
 ## Secrets and trust (R-1xx)
