@@ -216,7 +216,8 @@ R-316: Name functions verb + noun, or verb + adjective + noun; the noun is manda
   - One verb lexicon across the codebase: reads `get`/`list`/`fetch`/`load`; writes `create`/`insert`/`update`/`record`/`save`; removal `drop`/`remove`/`exclude`; construction `build`/`generate`/`map`.
   - Booleans take `is`/`has`/`can`/`should`; mapper functions may use the `toX` form.
   - Exception (Ruby): predicate methods end in `?` (`expired?`, `admin?`), the community idiom; never `is_expired`. Go keeps the prefixes (`IsExpired`, `HasAccess`).
-  Enforcement: judge
+  - The lexicon above is encoded as data in `enforce/lexicon.json` (approved verbs, banned synonyms with their canonical replacement, boolean prefixes) so it is decided by set membership rather than recall. A repo opts in with a `naming` key in `.enforce.json`, replaces any list outright, or adds to one through `naming.extend`. A `naming.glossary` additionally constrains the head noun to declared domain terms (R-330), which is what stops a synonym drifting in. Edit the registry and this bullet together; they are one rule in two forms.
+  Enforcement: eslint:lexicon-naming (registry-backed, opt-in per repo; decides verb membership, the mandatory noun, banned synonyms, boolean prefixes, and the glossary head noun); judge for the residue, above all whether the lexicon carves the domain well
 
 R-317: Name variables descriptively; never abbreviate where the full word reads clearly, and optimize for readability over brevity.
   Spec:
@@ -226,7 +227,8 @@ R-317: Name variables descriptively; never abbreviate where the full word reads 
   - Booleans follow R-316's `is`/`has`/`can`/`should` prefixes, never a bare adjective.
   - A name must read as natural English when the code is read aloud; rename any name that does not communicate intent.
   - Exception (Go): the idiomatic short names (`err`, `ok`, `ctx`, `i`, one-letter receivers) are correct in small scopes; descriptive names still required for anything living beyond a screen.
-  Enforcement: judge
+  - Two of these are decidable and are enforced as data: a variable bound to an array literal or a `.map()`/`.filter()` result carries a plural noun, and a single-word variable is not one of the participles listed in `enforce/lexicon.json` under `bareAdjectives`. The rest stays judgment.
+  Enforcement: eslint:lexicon-naming (plural collections, bare adjectives); judge for the rest
 
 R-318: Give each file one responsibility; split when it serves more than one concern.
   Spec: size is a smell, not a hard cap; the filename (R-315) names the single responsibility.
