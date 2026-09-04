@@ -17,7 +17,7 @@ R-103: Treat every real credential file as read-only; never a scratch, test, or 
 R-104: Sanitize artifacts before writing them: secrets to `[REDACTED]`, PII to `[PII]`, internal URLs to `[INTERNAL_URL]`. [manual]
 R-105: Obtain explicit confirmation before any destructive MCP action (delete, drop, rotate, send, post, create) unless pre-authorized this turn. [hook:mcp-action-guard]
 R-106: Every push of `~/.claude` is publishing (public remote): `git diff origin/main` first; no secrets, no local filesystem paths, no client-identifying content. [hook:global-repo-push-guard]
-R-107: Investigate any `core.hooksPath` resolving outside the expected lefthook path before committing; treat the drift as a supply-chain signal. [hook:hookspath-drift-check]
+R-107: Investigate any `core.hooksPath` resolving outside the expected git hooks path before committing; treat the drift as a supply-chain signal. [hook:hookspath-drift-check]
 
 ## Conduct and output (R-2xx)
 

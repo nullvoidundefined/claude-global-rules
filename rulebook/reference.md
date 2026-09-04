@@ -65,7 +65,7 @@ R-106: Treat every push of `~/.claude` as publishing; its remote is public.
   Spec: before pushing, run `git diff origin/main`, then verify no secrets, no local filesystem paths, and no client-identifying content. Secrets and the real home path are hook-enforced; client-identifying content stays a manual check.
   Enforcement: hook:global-repo-push-guard
 
-R-107: Investigate any `core.hooksPath` value resolving outside the expected lefthook path before committing; treat the drift as a supply-chain signal.
+R-107: Investigate any `core.hooksPath` value resolving outside the expected git hooks path before committing; treat the drift as a supply-chain signal.
   Enforcement: hook:hookspath-drift-check (SessionStart warning)
 
 ## Conduct and output (R-2xx)
