@@ -348,12 +348,6 @@
         "repo": "anthropics/claude-plugins-official"
       }
     },
-    "claude-code-plugins": {
-      "source": {
-        "source": "github",
-        "repo": "anthropics/claude-code"
-      }
-    },
     "i-have-adhd": {
       "source": {
         "source": "github",
