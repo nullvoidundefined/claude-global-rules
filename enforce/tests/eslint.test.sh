@@ -86,6 +86,13 @@ run "$TMP/import-order-bad.ts" && { echo "FAIL: expected relative-before-alias i
 # so this exact case read as "deferred to local ESLint" and passed silently
 # (the 2026-09-04 flake, reproduced only when the suite ran from enforce/).
 LAST_REPORT=$(cd "$E" && node "$E/lint.mjs" "$TMP/import-order-bad.ts" 2>&1) && { echo "FAIL: import order verdict changed with the caller's cwd (repo root must come from the file, not cwd)"; diagnose; exit 1; } || true
+# Outside any git repo the root is the nearest ancestor carrying .enforce.json
+# (or a package manifest or local ESLint config), not the file's own directory:
+# the opt-in rules a fixture declares one level up must still be wired.
+OPTIN=$(mktemp -d); mkdir -p "$OPTIN/src/services"
+printf '{ "fileHeaders": true }\n' > "$OPTIN/.enforce.json"
+printf 'export function getNote() {}\n' > "$OPTIN/src/services/getNote.ts"
+run "$OPTIN/src/services/getNote.ts" && { echo "FAIL: expected the R-320 header rule from an .enforce.json two directories above the file"; diagnose; exit 1; } || true
 # Prettier's @trivago layout keeps a "next" type import adjacent to and before
 # its "next/link" subpath with no blank line; the gate must accept that instead
 # of demanding "next/link" first (the deadlock the pathGroups reconcile).
