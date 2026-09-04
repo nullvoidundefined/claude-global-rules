@@ -17,7 +17,7 @@ diagnose() {
   echo "--- lint report was ---" >&2
   printf '%s\n' "${LAST_REPORT:-(no output)}" >&2
   echo "--- resolved versions ---" >&2
-  for package in eslint eslint-plugin-import typescript-eslint; do
+  for package in eslint eslint-plugin-import-x typescript-eslint; do
     version=$(node -e "try { console.log(require('$E/node_modules/$package/package.json').version); } catch { console.log('unresolved'); }" 2>/dev/null || echo unresolved)
     echo "  $package $version" >&2
   done
@@ -74,7 +74,7 @@ printf 'export type PriceLevel = 1 | 2 | 3 | 4;\n' > "$TMP/types/priceLevel.ts"
 run "$TMP/types/priceLevel.ts" || { echo "FAIL: expected types/ literal-type union to be exempt from no-magic-numbers (R-324/R-307)"; diagnose; exit 1; }
 printf 'declare const z: { literal: (n: number) => unknown; union: (a: unknown[]) => unknown };\nexport const priceLevelSchema = z.union([z.literal(2), z.literal(3), z.literal(4)]);\n' > "$TMP/schemas/priceLevel.ts"
 run "$TMP/schemas/priceLevel.ts" || { echo "FAIL: expected schemas/ validation literals to be exempt from no-magic-numbers (R-324/R-304)"; diagnose; exit 1; }
-# import/order: "@/..." aliases are internal (import/internal-regex), so the
+# import-x/order: "@/..." aliases are internal (import-x/internal-regex), so the
 # prettier importOrder sequence external -> @/ alias -> relative must pass and
 # the reverse (relative before alias) must fail.
 printf 'import { E } from "docx";\n\nimport { A } from "@/data/thing";\n\nimport { S } from "./sibling";\n' > "$TMP/import-order-ok.ts"

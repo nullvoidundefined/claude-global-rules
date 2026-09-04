@@ -76,7 +76,7 @@ const LOCAL_ESLINT_CONFIG_NAMES = [
   "eslint.config.js", "eslint.config.mjs", "eslint.config.cjs", "eslint.config.ts",
   ".eslintrc", ".eslintrc.js", ".eslintrc.cjs", ".eslintrc.json", ".eslintrc.yml", ".eslintrc.yaml",
 ];
-const DEFERRED_TO_LOCAL_ESLINT = new Set(["import/order", "sort-imports", "simple-import-sort/imports"]);
+const DEFERRED_TO_LOCAL_ESLINT = new Set(["import-x/order", "import/order", "sort-imports", "simple-import-sort/imports"]);
 
 function hasLocalEslintConfig(root) {
   return LOCAL_ESLINT_CONFIG_NAMES.some((name) => existsSync(`${root}/${name}`));
