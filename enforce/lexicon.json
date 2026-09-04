@@ -1,5 +1,5 @@
 {
-  "$doc": "Naming registry backing R-316 and the decidable half of R-317. This file is the data form of the verb lexicon written into rulebook/reference.md R-316: 'is this a good name' is undecidable, 'is this verb in the lexicon' is a set membership test. Edit this file and that Spec bullet together. A repo opts in with a naming key in its .enforce.json and may replace or extend any list; see enforce/README.md.",
+  "$doc": "Naming registry backing R-316 and the decidable half of R-317. This file is the data form of the verb lexicon written into rulebook/reference.md R-316: 'is this a good name' is undecidable, 'is this verb in the lexicon' is a set membership test. Synonyms are disambiguated by layer rather than left to taste: the R-304/R-305 directory a file sits in is what makes 'remote' vs 'in memory' decidable from the path instead of from intent. Edit this file and that Spec bullet together. A repo opts in with a naming key in its .enforce.json and may replace or extend any list; see enforce/README.md.",
   "bannedVerbs": {
     "add": "create",
     "calc": "calculate",
@@ -14,8 +14,11 @@
     "manage": "name the actual operation",
     "obtain": "get",
     "perform": "name the actual operation",
+    "persist": "save",
     "proc": "name the actual operation",
     "process": "name the actual operation",
+    "record": "save",
+    "remove": "delete",
     "retrieve": "get",
     "run": "name the actual operation",
     "setup": "prepare",
@@ -62,6 +65,9 @@
     "is",
     "should"
   ],
+  "defaultVerbs": {
+    "read": "get"
+  },
   "irregularPlurals": [
     "children",
     "criteria",
@@ -74,6 +80,56 @@
     "series",
     "staff"
   ],
+  "scopeVerbs": {
+    "api": {
+      "read": "fetch"
+    },
+    "clients": {
+      "read": "fetch"
+    },
+    "config": {
+      "read": "load"
+    },
+    "database": {
+      "read": "load"
+    },
+    "prompts": {
+      "read": "load"
+    },
+    "repositories": {
+      "read": "load"
+    }
+  },
+  "verbGroups": {
+    "read": [
+      "fetch",
+      "get",
+      "load"
+    ]
+  },
+  "verbScopes": {
+    "drop": {
+      "directories": [
+        "database",
+        "repositories"
+      ],
+      "fallback": "delete"
+    },
+    "insert": {
+      "directories": [
+        "database",
+        "repositories"
+      ],
+      "fallback": "create"
+    },
+    "upsert": {
+      "directories": [
+        "database",
+        "repositories"
+      ],
+      "fallback": "save"
+    }
+  },
   "verbs": [
     "build",
     "calculate",
@@ -104,13 +160,10 @@
     "merge",
     "normalize",
     "parse",
-    "persist",
     "prepare",
     "publish",
     "read",
-    "record",
     "register",
-    "remove",
     "render",
     "resolve",
     "route",

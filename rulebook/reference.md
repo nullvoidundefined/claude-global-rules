@@ -213,7 +213,12 @@ R-316: Name functions verb + noun, or verb + adjective + noun; the noun is manda
   Scope: extends R-315.
   Spec:
   - No bare verb-adjective: write `dropProcessedJobs`, `selectScorableJobs`, not `dropHandled`, `selectScorable`.
-  - One verb lexicon across the codebase: reads `get`/`list`/`fetch`/`load`; writes `create`/`insert`/`update`/`record`/`save`; removal `drop`/`remove`/`exclude`; construction `build`/`generate`/`map`.
+  - One verb lexicon across the codebase, with the synonyms bound to a layer rather than left to taste (tightened 2026-09-04: four interchangeable read verbs is a four-way drift surface, and the R-304/R-305 directory is what makes "remote" versus "in memory" decidable from the path instead of from intent).
+    - Reads: `get` by default; `fetch` under `clients/` and `api/` (remote I/O); `load` under `repositories/`, `database/`, `config/`, and `prompts/` (data at rest). Using the wrong one for the layer is a violation, not a preference. `list` stays unrestricted: it encodes cardinality, not transport.
+    - Writes: `create` constructs a new entity anywhere, `save` and `update` are general; `insert` and `upsert` are reserved to `repositories/` and `database/`.
+    - Removal: `delete` by default; `drop` reserved to `repositories/` and `database/`; `exclude` is filtering, not deletion.
+    - Construction: `build`/`generate`/`map`.
+    - Banned as bare synonyms with no distinct meaning: `record` and `persist` (use `save`), `remove` (use `delete`), `retrieve`/`obtain`/`grab` (use `get`).
   - Booleans take `is`/`has`/`can`/`should`; mapper functions may use the `toX` form.
   - Exception (Ruby): predicate methods end in `?` (`expired?`, `admin?`), the community idiom; never `is_expired`. Go keeps the prefixes (`IsExpired`, `HasAccess`).
   - The lexicon above is encoded as data in `enforce/lexicon.json` (approved verbs, banned synonyms with their canonical replacement, boolean prefixes) so it is decided by set membership rather than recall. A repo opts in with a `naming` key in `.enforce.json`, replaces any list outright, or adds to one through `naming.extend`. A `naming.glossary` additionally constrains the head noun to declared domain terms (R-330), which is what stops a synonym drifting in. Edit the registry and this bullet together; they are one rule in two forms.

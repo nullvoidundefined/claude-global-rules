@@ -105,7 +105,22 @@ Opt in per repo, because the vocabulary is the repo's:
 }
 ```
 
-A top-level list (`verbs`, `bannedVerbs`, `bareAdjectives`, `irregularPlurals`) replaces the shipped one; `extend` adds to it. Omitting `glossary` skips head-noun checking rather than passing it. A repo with no `naming` key gets exactly the behavior it had before the rule existed. Tests, fixtures, mocks, `e2e/`, and `.d.ts` are exempt. PascalCase is skipped, so React components and classes are untouched.
+### Synonyms are bound to a layer
+
+Four interchangeable read verbs is a four-way drift surface, so the registry binds each to the R-304/R-305 directory that gives it meaning. The layer is a path predicate, which is what makes "remote" versus "in memory" decidable from the tree instead of from intent:
+
+| Tree | Read verb | Also reserved here |
+|---|---|---|
+| `clients/`, `api/` | `fetch` | |
+| `repositories/`, `database/` | `load` | `insert`, `upsert`, `drop` |
+| `config/`, `prompts/` | `load` | |
+| everywhere else | `get` | |
+
+`getNote` under `clients/` reports `The read verb here is "fetch", not "get"`; `insertNote` under `services/` reports `Verb "insert" belongs to database/repositories: use "create" here`. `list` stays unrestricted in every layer because it encodes cardinality, not transport. `record`, `persist`, and `remove` are banned outright as bare synonyms of `save`, `save`, and `delete`.
+
+Retarget any of this per repo: `scopeVerbs` maps a directory to the verb its group must use, `defaultVerbs` sets the fallback, `verbGroups` says which verbs form a substitutable set, and `verbScopes` restricts a single verb to named directories with a fallback suggestion.
+
+A top-level list (`verbs`, `bannedVerbs`, `bareAdjectives`, `irregularPlurals`) replaces the shipped one; map-valued fields (`bannedVerbs`, `defaultVerbs`, `scopeVerbs`, `verbGroups`, `verbScopes`) merge key by key, so retargeting one verb does not mean restating the table; `extend` adds to any of them. Omitting `glossary` skips head-noun checking rather than passing it. A repo with no `naming` key gets exactly the behavior it had before the rule existed. Tests, fixtures, mocks, `e2e/`, and `.d.ts` are exempt. PascalCase is skipped, so React components and classes are untouched.
 
 ## The ratchet (long-term enforcement)
 

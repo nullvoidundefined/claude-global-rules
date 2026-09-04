@@ -11,6 +11,14 @@
  *          lexicon or is a boolean prefix, a noun follows it, the verb is not a
  *          banned synonym of a canonical verb, and a function annotated
  *          `: boolean` leads with is/has/can/should
+ *   R-316  a layer-bound verb appears only under the directory that gives it
+ *          meaning (`insert`/`upsert`/`drop` in repositories/database), and the
+ *          read verb is the one that layer fixes: `fetch` under clients/api
+ *          (remote), `load` under repositories/database/config/prompts (at
+ *          rest), `get` everywhere else. Four interchangeable read verbs is a
+ *          four-way drift surface; binding each to a layer makes "remote" vs
+ *          "in memory" decidable from the path instead of from intent. `list`
+ *          stays free: it encodes cardinality, not transport.
  *   R-316  with a glossary configured, the head noun is a declared domain term,
  *          which is what stops `generatePublicMemo` drifting from `...Note`
  *   R-317  a variable bound to an array literal or a .map()/.filter() result is
@@ -54,6 +62,20 @@ function producesCollection(init) {
   );
 }
 
+/** Path segments of a file, so layer membership is an exact-segment test. */
+function pathSegments(filename) {
+  return filename.split(/[\\/]/).filter((segment) => segment !== "");
+}
+
+/** The innermost directory along the path that declares scoped verbs. */
+function innermostScope(filename, scopeVerbs) {
+  const segments = pathSegments(filename);
+  for (let index = segments.length - 1; index >= 0; index -= 1) {
+    if (Object.hasOwn(scopeVerbs, segments[index])) return scopeVerbs[segments[index]];
+  }
+  return null;
+}
+
 /** The function-like node behind a declarator, or null when it is not one. */
 function functionBehindDeclarator(declarator) {
   const init = declarator.init;
@@ -75,8 +97,12 @@ export default {
           bannedVerbs: { type: "object", additionalProperties: { type: "string" } },
           bareAdjectives: { type: "array", items: { type: "string" } },
           booleanPrefixes: { type: "array", items: { type: "string" } },
+          defaultVerbs: { type: "object", additionalProperties: { type: "string" } },
           glossary: { type: "array", items: { type: "string" } },
           irregularPlurals: { type: "array", items: { type: "string" } },
+          scopeVerbs: { type: "object", additionalProperties: { type: "object" } },
+          verbGroups: { type: "object", additionalProperties: { type: "array" } },
+          verbScopes: { type: "object", additionalProperties: { type: "object" } },
           verbs: { type: "array", items: { type: "string" } },
         },
         additionalProperties: false,
@@ -91,6 +117,11 @@ export default {
     const bareAdjectives = new Set(options.bareAdjectives ?? []);
     const irregularPlurals = new Set(options.irregularPlurals ?? []);
     const glossary = new Set(options.glossary ?? []);
+    const verbScopes = options.verbScopes ?? {};
+    const verbGroups = options.verbGroups ?? {};
+    const defaultVerbs = options.defaultVerbs ?? {};
+    const scopeVerbs = options.scopeVerbs ?? {};
+    const filename = context.filename ?? context.getFilename();
 
     /** Applies every R-316 decision to one named function. */
     function checkFunctionName(node, nameNode, functionNode) {
@@ -131,6 +162,28 @@ export default {
           message: `"${name}" returns boolean (R-316): lead with ${[...booleanPrefixes].sort().join("/")}.`,
         });
         return;
+      }
+
+      const scope = verbScopes[leadingWord];
+      if (scope && !pathSegments(filename).some((segment) => scope.directories.includes(segment))) {
+        context.report({
+          node: nameNode,
+          message: `Verb "${leadingWord}" belongs to ${scope.directories.join("/")} (R-316): use "${scope.fallback}" here.`,
+        });
+        return;
+      }
+
+      const declaredScope = innermostScope(filename, scopeVerbs);
+      for (const [groupName, groupVerbs] of Object.entries(verbGroups)) {
+        if (!groupVerbs.includes(leadingWord)) continue;
+        const requiredVerb = declaredScope?.[groupName] ?? defaultVerbs[groupName];
+        if (requiredVerb && leadingWord !== requiredVerb) {
+          context.report({
+            node: nameNode,
+            message: `The ${groupName} verb here is "${requiredVerb}", not "${leadingWord}" (R-316): synonyms are bound to the layer that gives them meaning.`,
+          });
+          return;
+        }
       }
 
       const headNoun = words.at(-1);

@@ -14,12 +14,17 @@
 #  10. A collection bound to a singular name reports; the plural passes.
 #  11. PascalCase (components, classes) is skipped.
 #  12. Test trees are exempt.
+#  13. extend.verbs adds to the shipped lexicon.
+#  14. The read verb is the one its layer fixes: get by default, fetch under
+#      clients/ and api/, load under repositories/ and database/. Using another
+#      layer's read verb reports; list stays unrestricted.
+#  15. A layer-bound verb (insert, drop) outside its tree reports its fallback.
 set -euo pipefail
 E="$HOME/.claude/enforce"
 
 TMP=$(mktemp -d)
 cd "$TMP"
-mkdir -p src/services src/__tests__
+mkdir -p src/services src/__tests__ src/clients src/repositories
 
 # run <file> -> exits 0 when clean, 1 when the rule reports.
 run() { node "$E/lint.mjs" "$TMP/$1" >/dev/null 2>&1; }
@@ -94,5 +99,46 @@ run src/__tests__/exempt.ts || { echo "FAIL: test trees must be exempt from nami
 # 13. A repo-declared verb extends the shipped lexicon.
 printf '{"naming":{"enabled":true,"extend":{"verbs":["frobnicate"]}}}\n' > .enforce.json
 run src/services/unknown.ts || { echo "FAIL: extend.verbs must add to the shipped lexicon"; exit 1; }
+printf '{"naming":{"enabled":true}}\n' > .enforce.json
+
+# 14. Read verbs are bound to the layer that gives them meaning. Each case is a
+# path predicate, so "remote" vs "in memory" is decided from the tree, not intent.
+read_case() {
+  local path="$1" expectation="$2"
+  printf 'export function %sNote() { return 1; }\n' "$3" > "$path"
+  if [ "$expectation" = "pass" ]; then
+    run "$path" || { echo "FAIL: expected $3 to pass in $path"; exit 1; }
+  else
+    run "$path" && { echo "FAIL: expected $3 to report in $path"; exit 1; } || true
+    reports "$path" 'bound to the layer' || { echo "FAIL: $3 in $path must cite the layer binding"; exit 1; }
+  fi
+}
+read_case src/services/read-get.ts       pass   get
+read_case src/services/read-fetch.ts     report fetch
+read_case src/services/read-load.ts      report load
+read_case src/clients/read-fetch.ts      pass   fetch
+read_case src/clients/read-get.ts        report get
+read_case src/repositories/read-load.ts  pass   load
+read_case src/repositories/read-get.ts   report get
+
+# list encodes cardinality, not transport, so it is free in every layer.
+printf 'export function listNotes() { return 1; }\n' > src/clients/list.ts
+run src/clients/list.ts || { echo "FAIL: list must stay unrestricted by layer"; exit 1; }
+
+# 15. A layer-bound verb outside its tree names its fallback.
+printf 'export function insertNote() { return 1; }\n' > src/repositories/insert.ts
+run src/repositories/insert.ts || { echo "FAIL: expected insert to pass in repositories/"; exit 1; }
+printf 'export function insertNote() { return 1; }\n' > src/services/insert.ts
+run src/services/insert.ts && { echo "FAIL: expected insert to report outside repositories/"; exit 1; } || true
+reports src/services/insert.ts 'use "create" here' || { echo "FAIL: scoped verb must name its fallback"; exit 1; }
+printf 'export function dropNote() { return 1; }\n' > src/services/drop.ts
+reports src/services/drop.ts 'use "delete" here' || { echo "FAIL: drop outside the persistence trees must suggest delete"; exit 1; }
+
+# Bare synonyms banned in the 2026-09-04 tightening.
+for pair in "removeNote:delete" "recordNote:save" "persistNote:save"; do
+  fn=${pair%%:*}; canonical=${pair##*:}
+  printf 'export function %s() { return 1; }\n' "$fn" > src/services/synonym.ts
+  reports src/services/synonym.ts "use \"$canonical\"" || { echo "FAIL: $fn must resolve to $canonical"; exit 1; }
+done
 
 echo "naming-lexicon.test.sh PASS"

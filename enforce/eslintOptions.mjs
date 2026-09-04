@@ -57,7 +57,12 @@ function buildNamingOptions(enforceConfig) {
     const base = naming[field] ?? shipped[field] ?? [];
     merged[field] = [...new Set([...base, ...(extend[field] ?? [])])].sort();
   }
-  merged.bannedVerbs = { ...(naming.bannedVerbs ?? shipped.bannedVerbs ?? {}), ...(extend.bannedVerbs ?? {}) };
+  // Map-valued fields, including the layer scoping that disambiguates the read
+  // synonyms. Each merges key by key, so a repo can retarget one verb without
+  // restating the table.
+  for (const field of ["bannedVerbs", "defaultVerbs", "scopeVerbs", "verbGroups", "verbScopes"]) {
+    merged[field] = { ...(naming[field] ?? shipped[field] ?? {}), ...(extend[field] ?? {}) };
+  }
   // The glossary is never shipped: it is the project's own domain vocabulary
   // (R-330). Absent means head-noun checking is skipped, not that it passes.
   merged.glossary = [...new Set([...(naming.glossary ?? []), ...(extend.glossary ?? [])])].sort();
