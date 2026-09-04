@@ -15,8 +15,8 @@ How to install this `~/.claude` configuration on a new machine or hand it to som
 
 1. Clone this repo to `~/.claude` (the hooks and `settings.json` reference `~/.claude/...` paths, so the location matters).
 2. Reinstall plugins: they are managed by Claude Code and reinstalled from `settings.json` (`enabledPlugins`); the `plugins/` directory is gitignored.
-3. Recreate the two unversioned git-side files:
-   - `.git/hooks/pre-push`: a bash script running `enforce/tests/run-tests.sh` and `hooks/tests/run-tests.sh` (`chmod +x`), so a red suite aborts any push.
+3. Install the git-side files that `.git/` cannot carry itself:
+   - `bash ~/.claude/hooks/install-git-hooks.sh` writes `.git/hooks/pre-push` from the tracked `hooks/pre-push.sample`, so a red suite aborts any push. It refuses to clobber a pre-push it did not write. This step used to be "write a bash script that does X", and the script it described was simply absent from the checkout; the sample is tracked now so the description cannot drift from it.
    - `.git/info/exclude`: local-only exclusions for anything client-identifying that must never be tracked (versioned `.gitignore` covers the standard runtime dirs).
 4. Regenerate the hook-integrity manifest so it matches your checkout: `hooks/hook-integrity-check.sh --update`, then commit `enforce/hook-hashes.txt` if it changed.
 5. Start a Claude Code session. The SessionStart hooks load the global memory index, verify hook integrity, report enforcement closure (including whether the llm-judge tier can run; see the egress disclosure in README.md), and warn on a `core.hooksPath` that points outside the repo (R-107).
@@ -58,6 +58,8 @@ Run BOTH fixture suites; all tests should pass:
 bash ~/.claude/enforce/tests/run-tests.sh
 bash ~/.claude/hooks/tests/run-tests.sh
 ```
+
+The same two suites run in CI (`.github/workflows/enforce.yml`, job `fixtures`). Name that job as a required status check under Settings > Branches so the gate runs where it cannot be skipped: the local pre-push hook is `--no-verify`-able and is therefore advisory however it is written.
 
 The ESLint-backed tests in the first suite need `enforce/node_modules`, which is
 gitignored and therefore absent from a fresh clone. Run `npm install` in

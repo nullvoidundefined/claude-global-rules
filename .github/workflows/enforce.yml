@@ -1,0 +1,55 @@
+# Runs the enforcement suites where they cannot be skipped.
+#
+# A local git hook is --no-verify-able, which makes it advisory however it is
+# written. Determinism needs the check to run somewhere the author does not
+# control, so this exists to be named as a required status check under branch
+# protection (Settings > Branches > require status checks > "fixtures").
+#
+# The fixture suites resolve paths through $HOME/.claude, because that is where
+# this repo installs. The checkout is symlinked there rather than copied, so the
+# tests exercise the real tree.
+name: enforce
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  fixtures:
+    name: fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # node_modules is gitignored, so a fresh clone has none and the six
+      # ESLint-backed fixtures fail on a missing ESLint rather than on a defect.
+      - name: Install enforcement dependencies
+        run: npm ci --prefix enforce || npm install --prefix enforce
+
+      - name: Install the checkout at ~/.claude
+        run: |
+          rm -rf "$HOME/.claude"
+          ln -s "$GITHUB_WORKSPACE" "$HOME/.claude"
+
+      # Several fixtures shell out to `git commit` in throwaway repos.
+      - name: Configure a git identity for the fixtures
+        run: |
+          git config --global user.email "enforce-ci@example.invalid"
+          git config --global user.name "enforce CI"
+
+      - name: Enforcement fixtures
+        run: bash "$HOME/.claude/enforce/tests/run-tests.sh"
+
+      - name: Hook fixtures
+        run: bash "$HOME/.claude/hooks/tests/run-tests.sh"
+
+      # This repo carries no TypeScript, so the ratchet reports "nothing to
+      # baseline" and exits 0. The step is here so a regression in the ratchet
+      # itself surfaces as a red check rather than at first use in a real repo.
+      - name: Ratchet
+        run: node "$HOME/.claude/enforce/ratchet.mjs" "$GITHUB_WORKSPACE"

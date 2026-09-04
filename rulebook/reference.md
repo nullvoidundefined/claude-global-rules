@@ -252,7 +252,7 @@ R-319: Export exactly one public function per module across the `services/`, `ap
 
 R-320: Write a file-level header comment on every new source file stating what the module provides and why it exists.
   Scope: TypeScript/JavaScript `/** */` block; Python module docstring. Skip for test files, `.d.ts` declarations, barrel files, single-constant files, and pure type re-exports. File-level headers are required even where comments are otherwise minimal.
-  Enforcement: judge; hook:new-file-header-reminder (advisory)
+  Enforcement: eslint:file-header-comment, opt-in per repo via `fileHeaders: true` in `.enforce.json` (decides that a leading comment exists; accepts a line or block comment, matching hooks/new-file-header-reminder.sh so the two enforcers of this rule agree on scope). Opt-in rather than default because turning it on is a repo-wide adoption with a large baseline, and the exemption list varies by codebase; pair it with ratchet.mjs to grandfather existing files. hook:new-file-header-reminder stays as the always-on advisory nudge at write time; judge for whether the header says anything useful; hook:new-file-header-reminder (advisory)
 
 R-321 [ts]: Order TypeScript/JavaScript files top to bottom: imports, types, constants, primary export, helpers.
   Spec:
@@ -290,7 +290,7 @@ R-324: Extract every literal that carries meaning to a named constant; no magic 
 
 R-325: Destructure when reading two or more properties from the same object; never destructure a method off its object.
   Spec: single-property access may use dot notation; invoke methods via dot notation (`obj.doThing()`, not `const { doThing } = obj`) to preserve `this`.
-  Enforcement: judge
+  Enforcement: eslint:destructure-object-reads (decides the 2+ distinct property reads per scope; method calls are excluded because destructuring a method off its object is what this rule forbids); judge for "never destructure a method", which is a type question rather than a syntax one
 
 R-326 [ts]: Never write IIFEs; declare a named `async function` and call it.
   Spec: inside a `useEffect` or similar synchronous context: `async function doWork() { ... } void doWork();`; never `void (async () => { ... })()` or `(async () => { ... })()`.

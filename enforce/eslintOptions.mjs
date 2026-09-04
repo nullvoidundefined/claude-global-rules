@@ -9,11 +9,25 @@
  *   R-303  import zones, from .enforce.json importZones
  *   R-316  the naming lexicon, from .enforce.json naming
  * A repo with neither key gets the same behavior it had before either existed.
+ *
+ * R-325 is on by default: a 2+ property read is the same defect in every
+ * codebase and needs no project vocabulary. The push gate scopes it to added
+ * lines (lint.mjs --added-only) and ratchet.mjs grandfathers existing debt.
+ *
+ * R-320 is opt-in (.enforce.json fileHeaders), which is a correction rather
+ * than a preference. Shipped default-on first, and the fixture suite failed in
+ * five places: every minimal fixture written to test some OTHER rule suddenly
+ * needed a header. That is the honest signal that "every module carries a
+ * header" is a project convention with a large adoption cost, not a universal
+ * defect, and its exemption list varies by codebase. Editing thirty fixtures to
+ * satisfy a rule those tests are not about would have hidden that.
  */
 import importPlugin from "eslint-plugin-import";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import destructureObjectReads from "./rules/destructure-object-reads.mjs";
+import fileHeaderComment from "./rules/file-header-comment.mjs";
 import namingLexicon from "./rules/naming-lexicon.mjs";
 
 const configPath = fileURLToPath(new URL("./eslint.config.mjs", import.meta.url));
@@ -103,6 +117,48 @@ export function buildEslintOptions(repoRoot) {
       // plugin namespace.
       plugins: { lexicon: { rules: { naming: namingLexicon } } },
       rules: { "lexicon/naming": ["error", namingOptions] },
+    });
+  }
+
+  // Path skips mirror hooks/new-file-header-reminder.sh, so the two enforcers of
+  // R-320 never disagree about which files are in scope.
+  const CONVENTION_IGNORES = [
+    "**/__tests__/**",
+    "**/__fixtures__/**",
+    "**/__mocks__/**",
+    "**/tests/**",
+    "**/e2e/**",
+    "**/migrations/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/*.stories.ts",
+    "**/*.stories.tsx",
+    "**/*.config.ts",
+    "**/*.d.ts",
+  ];
+  const conventionPlugin = {
+    convention: {
+      rules: {
+        "destructure-object-reads": destructureObjectReads,
+        "file-header-comment": fileHeaderComment,
+      },
+    },
+  };
+
+  overrideConfig.push({
+    files: ["**/*.ts", "**/*.tsx"],
+    ignores: CONVENTION_IGNORES,
+    plugins: conventionPlugin,
+    rules: { "convention/destructure-object-reads": "error" },
+  });
+
+  if (enforceConfig.fileHeaders === true) {
+    overrideConfig.push({
+      files: ["**/*.ts", "**/*.tsx"],
+      ignores: CONVENTION_IGNORES,
+      rules: { "convention/file-header-comment": "error" },
     });
   }
 
