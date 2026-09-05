@@ -10,7 +10,7 @@ bash ~/.claude/cursor/install.sh
 
 That symlinks `~/.cursor/rules`, `~/.cursor/hooks.json`, `~/.cursor/agents`, `~/.cursor/commands`, and `~/.cursor/skills` into this directory, so a `git pull` of `~/.claude` updates Cursor too. It refuses to replace anything at those paths it did not create and prints the `mv` to run instead. Restart Cursor afterwards; check Settings > Rules for the `.mdc` rules and Settings > Hooks for the eight events.
 
-Cursor also reads `~/.claude/skills/` as a global skills directory on its own, so the thirteen skills need no port; `~/.cursor/skills` carries only the two overrides whose bodies use Claude Code's shell-include syntax (`/protocol`, `/known-issues`).
+All thirteen skills are rendered into `skills/` so the port is self-contained; Cursor also reads `~/.claude/skills/` directly, and `~/.cursor/skills` wins on a name collision, which is how the two skills whose bodies use Claude Code's shell-include syntax (`/protocol`, `/known-issues`) get bodies Cursor can use.
 
 If this Cursor build does not read a user-level rules directory, the fallback is per project:
 
@@ -41,6 +41,7 @@ node ~/.claude/cursor/build.mjs --write
 | `skills/structure-conventions`, `CLOUD-DEPLOYMENT.md` | `rules/structure-conventions.mdc`, `rules/cloud-deployment.mdc` | Also reachable as a skill and a file |
 | `agents/*.md` | `agents/*.md` | Cursor subagent frontmatter (`model: inherit`, `readonly` from the tool list); bodies unchanged, model routing stays in the prose |
 | slash commands | `commands/*.md` | `session-start`, `session-handoff`, and one dispatcher per agent |
+| `skills/*` | `skills/<name>/SKILL.md` | Same SKILL.md standard, all thirteen |
 | `settings.json` hooks | `hooks.json` + `hooks/claude-hook-adapter.sh` | 38 of 42 hooks; see `PORT-STATUS.md` for the per-hook table and the four that have no Cursor event |
 | `settings.json` permissions | the adapter | `Bash(...)` deny and ask rules mirrored on `beforeShellExecution`; `Read(...)` deny rules mirrored on `beforeReadFile` |
 
@@ -53,6 +54,7 @@ Cursor and Claude Code both run hook scripts with JSON on stdin and JSON on stdo
 | `beforeShellExecution` | the 18 PreToolUse Bash gates, plus the `Bash(...)` permission rules | Full: `deny` and `ask` block before the command runs, with the hook's reason as `user_message` and `agent_message` |
 | `beforeMCPExecution` | `mcp-action-guard`, `destructive-db-guard` | Full. Cursor reports a bare tool name, so the adapter prefixes `mcp__cursor__` to match the guards' naming |
 | `beforeReadFile` | the `Read(...)` deny rules | Full: `.env*`, `~/.aws`, `~/.ssh`, `~/.gnupg`, gh hosts.yml, `~/.netrc` stay off-path (R-102) |
+| `preToolUse` | the 5 PreToolUse Write/Edit gates | Best effort: this event arrived after Cursor 1.7 and its payload is not pinned down in any source available when this was written, so the adapter acts only on a payload that carries a file path and new content, and answers allow otherwise. Where it works, the edit gates deny before the edit lands and nothing is deferred |
 | `afterFileEdit` | the 5 PreToolUse and 6 PostToolUse Write/Edit hooks | Partial: Cursor has no pre-edit event, so a gate that would have denied the edit cannot. Its finding is written to a per-conversation file and the `stop` hook returns it as `followup_message`, which Cursor submits as the next turn, so the agent is told to repair the edit before the turn stands. The advisory reminders travel the same way |
 | `afterShellExecution` | `redact-output` | Detection only, as in Claude Code, and Cursor currently ignores this event's output; the warning is deferred to `stop` as above |
 | `sessionStart` | `session-start` and the five integrity and guard checks | Emits `additional_context`; see Caveats |
@@ -65,7 +67,7 @@ Debug a payload mismatch after a Cursor update with `CLAUDE_CURSOR_HOOK_DEBUG=1`
 
 - **Global rules directory.** Cursor documents User Rules as a plain-text setting; reading `.mdc` files from `~/.cursor/rules` is widely reported to work but is not in the primary docs. If Settings > Rules shows nothing after install, use `--project`.
 - **sessionStart context.** Bug reports against recent Cursor builds say `additional_context` from `sessionStart` does not always reach the agent. The three always-on rules carry the same content, and the `/session-start` command runs the R-001 procedure by hand.
-- **Edits land before the gates see them.** R-207 (em dash), R-103 (credential paths), R-302, R-401, R-405 (content gate), and the structure rules are enforced after the fact through the stop hook rather than blocked at the tool call. The commit-time gates (`beforeShellExecution`) still block a commit that carries a violation.
+- **Edits may land before the gates see them.** On builds where `preToolUse` does not fire for edits, R-207 (em dash), R-103 (credential paths), R-302, R-401, R-405 (content gate), and the structure rules are enforced after the fact through the stop hook rather than blocked at the tool call. The commit-time gates (`beforeShellExecution`) still block a commit that carries a violation.
 - **No compaction hook.** `post-compact-rules` has no equivalent; Cursor manages its own summarisation.
 - **Task tools.** R-502 and R-504 refer to Cursor's task list; `task-commit-reminder` (which fires on Claude Code's `TaskUpdate`) has no event to bind to.
 - **hooks.json extras.** The `timeout` field on each entry is honored by builds that know it and ignored otherwise; the stop entry allows the full `CLAUDE_VERIFY_TIMEOUT` window.

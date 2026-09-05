@@ -2,4 +2,4 @@
 
 Use this agent to conduct a marketing audit (CMO perspective): positioning, conversion copy, pricing page effectiveness, trust signals, banned-word scans, and truth-vs-claim drift between marketing pages and backend behavior. Use when the user asks for a marketing audit or before any major launch or pricing change. Produces `docs/audits/YYYY-MM-DD-marketing.md` and commits it.
 
-Delegate this to the `audit-marketing` subagent. If subagents are unavailable in this Cursor build, read `~/.claude/agents/audit-marketing.md` and carry out that role definition in this conversation, honoring its model-routing and output-discipline sections.
+Delegate this to the `audit-marketing` subagent. If subagents are unavailable in this build, read `~/.claude/agents/audit-marketing.md` and carry out that role definition in this conversation, honoring its model-routing and output-discipline sections.

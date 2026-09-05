@@ -82,21 +82,27 @@ suites, then `package.json` `test` plus `typecheck`/`type-check`, then
 - `CLAUDE_SKIP_VERIFY=1` bypasses for one turn. `CLAUDE_VERIFY_TIMEOUT` (default
   600s) caps each command.
 
-## Cursor
+## Cursor and OpenAI Codex
 
-The same rules and hooks are available to Cursor from `cursor/`, generated from
-the files above by `node cursor/build.mjs --write`. After the install steps:
+The same rules and hooks are available to Cursor from `cursor/` and to OpenAI
+Codex from `openai/`, both generated from the files above (`node
+cursor/build.mjs --write`, `node openai/build.mjs --write`). After the install
+steps:
 
 ```
 bash ~/.claude/cursor/install.sh
+bash ~/.claude/openai/install.sh
 ```
 
-symlinks `~/.cursor/rules`, `~/.cursor/hooks.json`, `~/.cursor/agents`,
-`~/.cursor/commands`, and `~/.cursor/skills` into the port, refusing to replace
-anything it did not create. Restart Cursor and check Settings > Rules and
-Settings > Hooks. If this Cursor build does not read a user-level rules
-directory, `bash ~/.claude/cursor/install.sh --project <repo>` copies the rules
-and `hooks.json` into that repo's `.cursor/` instead. Skills load from
-`~/.claude/skills/` without any copy. `cursor/README.md` carries the per-event
-fidelity table and the caveats; `cursor/PORT-STATUS.md` the per-hook table.
-
+The first symlinks `~/.cursor/rules`, `~/.cursor/hooks.json`, `~/.cursor/agents`,
+`~/.cursor/commands`, and `~/.cursor/skills` into the Cursor port; the second
+symlinks `~/.codex/AGENTS.md`, `~/.codex/hooks.json`, `~/.codex/skills`, and
+`~/.codex/agents` into the Codex port. Both refuse to replace anything they did
+not create. Restart Cursor and check Settings > Rules and Settings > Hooks; in
+Codex run `/hooks` to review and trust the hook entries (trust is per content
+hash, so every change to a hook needs a fresh trust) and `/skills` to see the
+skills. If a Cursor build does not read a user-level rules directory,
+`bash ~/.claude/cursor/install.sh --project <repo>` copies the rules and
+`hooks.json` into that repo's `.cursor/` instead. `cursor/README.md` and
+`openai/README.md` carry the per-event fidelity tables and the caveats; the
+two `PORT-STATUS.md` files the per-hook tables.

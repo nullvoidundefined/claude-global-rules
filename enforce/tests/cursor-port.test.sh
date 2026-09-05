@@ -34,7 +34,9 @@ node "$ROOT/cursor/build.mjs" --check >/dev/null 2>"$TMP/check.err" \
   || fail "cursor/ is out of date with its sources: $(cat "$TMP/check.err" | head -3)"
 
 # 2. Shape of the port.
-jq -e '.version == 1 and (.hooks | length >= 8)' "$ROOT/cursor/hooks.json" >/dev/null || fail "hooks.json must be version 1 with the eight events"
+jq -e '.version == 1 and (.hooks | length >= 9)' "$ROOT/cursor/hooks.json" >/dev/null || fail "hooks.json must be version 1 with the nine events"
+[ "$(ls -d "$ROOT"/cursor/skills/*/ | wc -l | tr -d ' ')" = "$(ls -d "$ROOT"/skills/*/ | wc -l | tr -d ' ')" ] || fail "every skill must be rendered into cursor/skills"
+grep -q '```!' "$ROOT/cursor/skills/protocol/SKILL.md" && fail "the protocol skill must not carry a shell include"
 [ -x "$ADAPTER" ] || fail "adapter is not executable"
 [ -x "$ROOT/cursor/install.sh" ] || fail "install.sh is not executable"
 for rule in "$ROOT"/cursor/rules/*.mdc; do
@@ -92,6 +94,11 @@ printf '%s' "$FIRST" | grep -q 'pnpm test failed' || fail "a blocking stop hook 
 [ "$(CLAUDE_HOOKS_DIR="$TMP/hooks" run '{"status":"completed","workspace_roots":["/tmp"],"conversation_id":"red"}' stop verification-gate)" = "{}" ] || fail "an identical followup must be suppressed on the next stop (loop guard)"
 THIRD=$(CLAUDE_HOOKS_DIR="$TMP/hooks" run '{"status":"completed","workspace_roots":["/tmp"],"conversation_id":"red"}' stop verification-gate | jq -r '.followup_message // ""')
 printf '%s' "$THIRD" | grep -q 'pnpm test failed' || fail "the loop guard must reset after one suppression"
+
+# preToolUse (newer builds): an edit-shaped payload reaches the gates, a shell
+# or read payload does not.
+[ "$(run "{\"tool_name\":\"edit_file\",\"tool_input\":{\"target_file\":\"$TMP/proj/src/services/c.ts\",\"code_edit\":\"const c = 1; // $EM_DASH\"},\"workspace_roots\":[\"$TMP/proj\"],\"conversation_id\":\"pre\"}" preToolUse no-em-dash | permission)" = "deny" ] || fail "preToolUse must deny an em dash in an edit-shaped payload"
+[ "$(run '{"tool_name":"run_terminal_cmd","tool_input":{"command":"ls"},"conversation_id":"pre"}' preToolUse no-em-dash | permission)" = "allow" ] || fail "preToolUse must leave shell payloads to beforeShellExecution"
 
 # Fail open.
 [ "$(printf 'not json' | "$ADAPTER" beforeShellExecution secret-scan 2>/dev/null | permission)" = "allow" ] || fail "garbage stdin must fail open"

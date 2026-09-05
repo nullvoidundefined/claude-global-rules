@@ -23,6 +23,9 @@
 #   afterFileEdit        -> PreToolUse+PostToolUse Write|Edit, replayed after the fact;
 #                           findings are deferred and surfaced by the stop hook
 #   beforeReadFile       -> the Read(...) deny rules of ~/.claude/settings.json
+#   preToolUse           -> PreToolUse Write|Edit, only when the payload describes a
+#                           file write (newer Cursor builds; lets the edit gates deny
+#                           before the edit lands instead of deferring)
 #   sessionStart         -> SessionStart           {additional_context}
 #   sessionEnd           -> SessionEnd             (no response)
 #   stop                 -> Stop                   {followup_message}
@@ -178,66 +181,13 @@ record_finding() {
   printf '%s\n\n' "$1" >>"$FINDINGS_FILE" 2>/dev/null || true
 }
 
-# --- beforeReadFile: the Read(...) deny rules of settings.json ---------------
-
-deny_read_regexes() {
-  [ -f "$SETTINGS_FILE" ] || return 0
-  jq -r '.permissions.deny[]? | select(startswith("Read(")) | .[5:-1]' "$SETTINGS_FILE" 2>/dev/null \
-    | while IFS= read -r pattern; do
-        [ -n "$pattern" ] || continue
-        case "$pattern" in
-          //*) pattern="/${pattern#//}" ;;
-          "~/"*) pattern="$HOME/${pattern#\~/}" ;;
-        esac
-        # Glob to ERE: "**/" spans directories, "*" stays inside one segment.
-        pattern=$(printf '%s' "$pattern" | sed -e 's/[.+?^$(){}|[]/\\&/g' -e 's#\*\*/#\x01#g' -e 's/\*\*/\x02/g' -e 's/\*/[^\/]*/g' -e 's#\x01#(.*/)?#g' -e 's/\x02/.*/g')
-        printf '^%s$\n' "$pattern"
-      done
-}
-
-read_is_denied() {
-  local file="$1" resolved regex
-  resolved=$(readlink -f "$file" 2>/dev/null || printf '%s' "$file")
-  while IFS= read -r regex; do
-    [ -n "$regex" ] || continue
-    if printf '%s' "$file" | grep -Eq "$regex" || printf '%s' "$resolved" | grep -Eq "$regex"; then
-      return 0
-    fi
-  done < <(deny_read_regexes)
-  return 1
-}
-
-# --- beforeShellExecution: the Bash(...) deny and ask rules of settings.json --
-
-bash_rule_regexes() {
-  # $1 = deny | ask. Claude Code rules are literal prefixes with "*" as the
-  # only wildcard; each becomes an anchored ERE over one command segment.
-  [ -f "$SETTINGS_FILE" ] || return 0
-  jq -r --arg k "$1" '.permissions[$k][]? | select(startswith("Bash(")) | .[5:-1]' "$SETTINGS_FILE" 2>/dev/null \
-    | while IFS= read -r rule; do
-        [ -n "$rule" ] || continue
-        printf '%s\t^[[:space:]]*%s[[:space:]]*$\n' "$rule" \
-          "$(printf '%s' "$rule" | sed -e 's/[.+?^$(){}|[\/]/\\&/g' -e 's/\]/\\]/g' -e 's/\*/.*/g')"
-      done
-}
-
-matching_bash_rule() {
-  # $1 = deny | ask, $2 = command. Prints the first rule matching the whole
-  # command or any segment of a compound command; silent otherwise.
-  local segments rule regex
-  segments=$(printf '%s\n' "$2"; printf '%s' "$2" | awk '{gsub(/&&|\|\||;|\|/, "\n"); print}')
-  while IFS=$'\t' read -r rule regex; do
-    [ -n "$regex" ] || continue
-    if printf '%s\n' "$segments" | grep -Eq "$regex"; then
-      printf '%s' "$rule"
-      return 0
-    fi
-  done < <(bash_rule_regexes "$1")
-  return 1
-}
+# --- the Bash(...) and Read(...) rules of settings.json -------------------------
+# shellcheck source=../../enforce/settingsPermissionRules.sh
+source "$ADAPTER_DIR/../../enforce/settingsPermissionRules.sh" 2>/dev/null || true
 
 apply_bash_permission_rules() {
   local cmd="$1" rule
+  type matching_bash_rule >/dev/null 2>&1 || return 0
   if rule=$(matching_bash_rule deny "$cmd"); then
     WORST="deny"
     REASONS=$(append_text "$REASONS" "settings.json denies \`Bash($rule)\` (Claude Code permissions.deny, mirrored under Cursor). A human runs this manually if it is genuinely required.")
@@ -324,10 +274,36 @@ handle_after_file_edit() {
   return 0
 }
 
+# preToolUse arrived after Cursor 1.7 and its payload is not pinned down in
+# any source this adapter was written from, so the handler is defensive: it
+# acts only when tool_input carries a recognizable file path plus new content,
+# and answers allow for anything else. Shell commands are left to
+# beforeShellExecution so no gate runs twice.
+handle_pre_tool_use() {
+  local file content old_string payload
+  file=$(printf '%s' "$INPUT" | jq -r '.tool_input | (.file_path // .path // .target_file // .relative_workspace_path // .filePath // "")' 2>/dev/null || true)
+  content=$(printf '%s' "$INPUT" | jq -r '.tool_input | (.content // .contents // .code_edit // .new_string // .new_str // "")' 2>/dev/null || true)
+  old_string=$(printf '%s' "$INPUT" | jq -r '.tool_input | (.old_string // .old_str // "")' 2>/dev/null || true)
+  if [ -z "$file" ] || [ -z "$content" ] || printf '%s' "$INPUT" | jq -e '.tool_input.command' >/dev/null 2>&1; then
+    printf '{"permission":"allow"}\n'
+    return 0
+  fi
+  case "$file" in /*) ;; *) file="$ROOT/$file" ;; esac
+  if [ -n "$old_string" ]; then
+    payload=$(jq -n --arg f "$file" --arg o "$old_string" --arg n "$content" --arg cwd "$ROOT" \
+      '{hook_event_name:"PreToolUse", tool_name:"Edit", tool_input:{file_path:$f, old_string:$o, new_string:$n}, cwd:$cwd}')
+  else
+    payload=$(jq -n --arg f "$file" --arg c "$content" --arg cwd "$ROOT" \
+      '{hook_event_name:"PreToolUse", tool_name:"Write", tool_input:{file_path:$f, content:$c}, cwd:$cwd}')
+  fi
+  run_all "$payload"
+  emit_permission
+}
+
 handle_before_read() {
   local file
   file=$(printf '%s' "$INPUT" | jq -r '.file_path // ""')
-  if [ -n "$file" ] && read_is_denied "$file"; then
+  if [ -n "$file" ] && type read_is_denied >/dev/null 2>&1 && read_is_denied "$file"; then
     jq -n --arg f "$file" '{permission:"deny",
       user_message:("Read of " + $f + " blocked (R-102): credential files stay off-path. Use the value from memory or ask the user; never echo it."),
       agent_message:("Read of " + $f + " blocked (R-102): credential files stay off-path. Use the value from memory or ask the user; never echo it.")}'
@@ -391,6 +367,7 @@ case "$EVENT" in
   beforeMCPExecution) handle_before_mcp ;;
   afterFileEdit) handle_after_file_edit ;;
   beforeReadFile) handle_before_read ;;
+  preToolUse) handle_pre_tool_use ;;
   sessionStart) handle_session_start ;;
   sessionEnd) handle_session_end ;;
   stop) handle_stop ;;

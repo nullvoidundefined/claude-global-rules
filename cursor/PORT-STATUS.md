@@ -2,14 +2,14 @@
 
 # Cursor port status
 
-Every hook wired in `settings.json`, and where it runs under Cursor. 38 of the 42 hooks port through the adapter across 8 Cursor events; the rest depend on a Claude Code event Cursor does not have. The fidelity notes for each ported event are in `cursor/README.md`.
+Every hook wired in `settings.json`, and where it runs under Cursor. 38 of the 42 hooks port through the adapter across 9 Cursor events; the rest depend on a Claude Code event Cursor does not have. The fidelity notes for each ported event are in `cursor/README.md`.
 
 ## Hooks
 
 | Hook | Claude Code event | Under Cursor |
 |---|---|---|
-| `secret-scan` | PreToolUse (Bash) | ported: `beforeShellExecution`, `afterFileEdit` |
-| `no-em-dash` | PreToolUse (Bash) | ported: `beforeShellExecution`, `afterFileEdit` |
+| `secret-scan` | PreToolUse (Bash) | ported: `beforeShellExecution`, `preToolUse`, `afterFileEdit` |
+| `no-em-dash` | PreToolUse (Bash) | ported: `beforeShellExecution`, `preToolUse`, `afterFileEdit` |
 | `fix-commit-requires-test` | PreToolUse (Bash) | ported: `beforeShellExecution` |
 | `conflict-markers` | PreToolUse (Bash) | ported: `beforeShellExecution` |
 | `commit-message-guard` | PreToolUse (Bash) | ported: `beforeShellExecution` |
@@ -26,11 +26,11 @@ Every hook wired in `settings.json`, and where it runs under Cursor. 38 of the 4
 | `llm-rule-judge` | PreToolUse (Bash) | ported: `beforeShellExecution` |
 | `single-file-folder-gate` | PreToolUse (Bash) | ported: `beforeShellExecution` |
 | `build-cheatsheets` | PreToolUse (Bash) | ported: `beforeShellExecution` |
-| `secret-scan` | PreToolUse (Write|Edit) | ported: `beforeShellExecution`, `afterFileEdit` |
-| `no-em-dash` | PreToolUse (Write|Edit) | ported: `beforeShellExecution`, `afterFileEdit` |
-| `migration-defaults-guard` | PreToolUse (Write|Edit) | ported: `afterFileEdit` |
-| `structure-gate` | PreToolUse (Write|Edit) | ported: `afterFileEdit` |
-| `content-gate` | PreToolUse (Write|Edit) | ported: `afterFileEdit` |
+| `secret-scan` | PreToolUse (Write|Edit) | ported: `beforeShellExecution`, `preToolUse`, `afterFileEdit` |
+| `no-em-dash` | PreToolUse (Write|Edit) | ported: `beforeShellExecution`, `preToolUse`, `afterFileEdit` |
+| `migration-defaults-guard` | PreToolUse (Write|Edit) | ported: `preToolUse`, `afterFileEdit` |
+| `structure-gate` | PreToolUse (Write|Edit) | ported: `preToolUse`, `afterFileEdit` |
+| `content-gate` | PreToolUse (Write|Edit) | ported: `preToolUse`, `afterFileEdit` |
 | `mcp-action-guard` | PreToolUse (mcp__.*) | ported: `beforeMCPExecution` |
 | `destructive-db-guard` | PreToolUse (mcp__.*) | ported: `beforeShellExecution`, `beforeMCPExecution` |
 | `redact-output` | PostToolUse (Bash) | ported: `afterShellExecution` |
