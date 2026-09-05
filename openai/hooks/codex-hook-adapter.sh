@@ -19,7 +19,8 @@
 #   3. The Bash(...) deny and ask rules of ~/.claude/settings.json are
 #      evaluated on PreToolUse Bash, since Codex does not read that file.
 #
-# Usage (from ~/.codex/hooks.json, one entry per hook group):
+# Usage (from ~/.codex/hooks.json, one entry per hook group; this file is
+# copied to ~/.codex/hooks/ by openai/build.mjs):
 #   codex-hook-adapter.sh <hook-name> [<hook-name> ...]
 # where <hook-name> is a basename in ~/.claude/hooks/ without ".sh". Stdin is
 # the Codex hook payload; stdout is the merged decision in Claude Code's
@@ -32,12 +33,14 @@
 set -uo pipefail
 
 HOOK_NAMES=("$@")
-ADAPTER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLAUDE_HOOKS_DIR="${CLAUDE_HOOKS_DIR:-$(cd "$ADAPTER_DIR/../../hooks" 2>/dev/null && pwd)}"
-STATE_DIR="${CLAUDE_CODEX_STATE_DIR:-$HOME/.claude/.codex-hook-state}"
+# The Claude Code configuration this port was generated from. Overridable so
+# the fixture tests can run against a checkout that is not at ~/.claude.
+CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
+CLAUDE_HOOKS_DIR="${CLAUDE_HOOKS_DIR:-$CLAUDE_HOME/hooks}"
+STATE_DIR="${CLAUDE_CODEX_STATE_DIR:-$CLAUDE_HOME/.codex-hook-state}"
 ASK_POLICY="${CLAUDE_CODEX_ASK_POLICY:-deny}"
 # shellcheck source=../../enforce/settingsPermissionRules.sh
-source "$ADAPTER_DIR/../../enforce/settingsPermissionRules.sh" 2>/dev/null || true
+source "$CLAUDE_HOME/enforce/settingsPermissionRules.sh" 2>/dev/null || true
 
 INPUT=$(cat 2>/dev/null || true)
 [ -n "$INPUT" ] || exit 0

@@ -1,24 +1,30 @@
 #!/usr/bin/env node
 /**
- * build.mjs: renders the Cursor port from the canonical Claude Code sources.
+ * build.mjs: renders the Cursor port from the canonical Claude Code sources
+ * into ~/.cursor, the directory Cursor reads beside ~/.claude:
  *
- *   cursor/rules/*.mdc        Cursor rules (always-on, glob-attached, or
- *                             agent-requested), one per source file or
- *                             rulebook block
- *   cursor/agents/*.md        Cursor subagents from agents/*.md
- *   cursor/commands/*.md      Cursor slash commands (session procedures and
- *                             one dispatcher per agent)
- *   cursor/skills/<name>/     every skill, with the two shell-include skills
- *                             given a body Cursor can use
- *   cursor/PORT-STATUS.md     which hook and permission layers port, and why
- *                             the rest do not
+ *   ~/.cursor/rules/*.mdc            Cursor rules (always-on, glob-attached, or
+ *                                    agent-requested), one per source file or
+ *                                    rulebook block
+ *   ~/.cursor/agents/*.md            Cursor subagents from agents/*.md
+ *   ~/.cursor/commands/*.md          Cursor slash commands (session procedures
+ *                                    and one dispatcher per agent)
+ *   ~/.cursor/skills/<name>/         every skill, with the two shell-include
+ *                                    skills given a body Cursor can use
+ *   ~/.cursor/hooks.json             the hook wiring (from cursor/hooks.json)
+ *   ~/.cursor/hooks/claude-hook-adapter.sh  the adapter (from cursor/hooks/)
+ *   ~/.cursor/PORT-STATUS.md         which hook and permission layers port,
+ *                                    and why the rest do not
  *
  * The loaders, the substitution primitive, and the --check / --write driver
- * live in enforce/portBuild.mjs, shared with openai/build.mjs.
+ * live in enforce/portBuild.mjs, shared with openai/build.mjs. Nothing
+ * generated is kept in this repository.
  *
- *   node cursor/build.mjs --check   exit 1 when the committed output is stale
- *   node cursor/build.mjs --write   regenerate the output tree
- *   node cursor/build.mjs --print   list the files the build would produce
+ *   node cursor/build.mjs --write             build (or refresh) ~/.cursor
+ *   node cursor/build.mjs --check             exit 1 when ~/.cursor is stale
+ *   node cursor/build.mjs --print             list the files the build produces
+ *   node cursor/build.mjs --write --project <repo>   build into <repo>/.cursor
+ *   node cursor/build.mjs --write --out <dir>        build into any directory
  */
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -30,11 +36,13 @@ import {
   annotateEnforcerTags,
   currentR001Line,
   generatedMarker,
+  homeDir,
   loadAgents,
   loadSettingsHookRows,
   loadSkills,
   loadStackConventions,
   parseFrontmatter,
+  parsePortArgs,
   readSource,
   runPortBuild,
   splitFrontmatter,
@@ -42,7 +50,13 @@ import {
 } from "../enforce/portBuild.mjs";
 
 const BUILDER = "cursor/build.mjs";
-const ADAPTER = "~/.claude/cursor/hooks/claude-hook-adapter.sh";
+// cursor/hooks.json names the adapter with this placeholder; the build fills
+// in the path Cursor resolves for the target: absolute for the user-level
+// ~/.cursor, relative to the repo root for a project-level .cursor/.
+const ADAPTER_PLACEHOLDER = "{{adapter}}";
+const ARGS = parsePortArgs(process.argv.slice(2), { defaultOutDir: join(homeDir(), ".cursor") });
+const OUT_DIR = ARGS.project ? join(ARGS.project, ".cursor") : ARGS.outDir;
+const ADAPTER = ARGS.project ? ".cursor/hooks/claude-hook-adapter.sh" : "~/.cursor/hooks/claude-hook-adapter.sh";
 
 const STACK_DESCRIPTIONS = {
   backend: "Express 5 and TypeScript API conventions - layers, handlers, services, repositories, clients, logging, containers. Auto-attached to server source trees.",
@@ -123,7 +137,7 @@ function portedHooks(hooksConfig) {
   for (const [event, entries] of Object.entries(hooksConfig.hooks)) {
     for (const entry of entries) {
       const parts = entry.command.trim().split(/\s+/);
-      if (parts[0] !== ADAPTER) throw new Error(`hooks.json: ${event} command does not start with ${ADAPTER}`);
+      if (parts[0] !== ADAPTER_PLACEHOLDER) throw new Error(`hooks.json: ${event} command does not start with ${ADAPTER_PLACEHOLDER}`);
       if (parts[1] !== event) throw new Error(`hooks.json: ${event} entry passes event "${parts[1]}" to the adapter`);
       for (const name of parts.slice(2)) {
         if (!existsSync(join(ROOT, "hooks", `${name}.sh`))) throw new Error(`hooks.json: ${event} names hooks/${name}.sh, which does not exist`);
@@ -144,7 +158,7 @@ function buildGlobalRules(ported) {
     [
       [
         "The trailing bracket names the enforcer: `[manual]` depends on recall; `[judge]` is the push-time LLM judge; hooks and ESLint fire mechanically.",
-        "The trailing bracket names the enforcer: `[manual]` depends on recall; `[judge]` is the push-time LLM judge; hooks and ESLint fire mechanically. Under Cursor the hooks fire through `~/.cursor/hooks.json` (the adapter in `~/.claude/cursor/hooks/`); a tag reading `hook:X in Claude Code; manual in Cursor` names a hook with no Cursor event, so that rule depends on recall here.",
+        "The trailing bracket names the enforcer: `[manual]` depends on recall; `[judge]` is the push-time LLM judge; hooks and ESLint fire mechanically. Under Cursor the hooks fire through `~/.cursor/hooks.json` (the adapter is `~/.cursor/hooks/claude-hook-adapter.sh`); a tag reading `hook:X in Claude Code; manual in Cursor` names a hook with no Cursor event, so that rule depends on recall here.",
       ],
       [
         "lives in `~/.claude/rulebook/reference.md`, read on demand:",
@@ -243,7 +257,7 @@ function buildRulebookReference() {
     const description = block
       ? `Full Spec, Scope, and Enforcement for the ${block} rules (${title}). ${hint} Fetch whenever a norm line in the global rules is not enough to act on, or when a hook or the push judge cites one of these rules.`
       : `Rulebook reference - ${heading}. ${hint}`;
-    const preface = `Source: \`~/.claude/rulebook/reference.md\`, section "${heading}". Enforcement lines describe the Claude Code harness; the Cursor port status of each hook is in \`~/.claude/cursor/PORT-STATUS.md\`.\n\n`;
+    const preface = `Source: \`~/.claude/rulebook/reference.md\`, section "${heading}". Enforcement lines describe the Claude Code harness; the Cursor port status of each hook is in \`~/.cursor/PORT-STATUS.md\`.\n\n`;
     files[`rules/rulebook-reference-${slug}.mdc`] = renderRule({ description }, "rulebook/reference.md", preface + section);
   }
   return files;
@@ -365,11 +379,14 @@ function buildPortStatus(hooksConfig, portedEvents) {
 // --- assembly ------------------------------------------------------------------------
 
 function buildAll() {
-  const hooksConfig = JSON.parse(readSource("cursor/hooks.json"));
+  const hooksSource = readSource("cursor/hooks.json");
+  const hooksConfig = JSON.parse(hooksSource);
   if (hooksConfig.version !== 1) throw new Error("cursor/hooks.json: version must be 1");
   const { names: ported, events: portedEvents } = portedHooks(hooksConfig);
   const agents = loadAgents();
   return {
+    "hooks.json": hooksSource.split(ADAPTER_PLACEHOLDER).join(ADAPTER),
+    "hooks/claude-hook-adapter.sh": readSource("cursor/hooks/claude-hook-adapter.sh"),
     "rules/000-global-rules.mdc": buildGlobalRules(ported),
     "rules/001-session-types.mdc": buildSessionTypes(),
     "rules/002-global-memory-index.mdc": buildGlobalMemoryIndex(),
@@ -385,10 +402,4 @@ function buildAll() {
   };
 }
 
-runPortBuild({
-  builder: BUILDER,
-  outDir: join(ROOT, "cursor"),
-  subdirs: ["rules", "agents", "commands", "skills"],
-  topLevelFiles: ["PORT-STATUS.md"],
-  buildAll,
-});
+runPortBuild({ builder: BUILDER, files: buildAll(), outDir: OUT_DIR, mode: ARGS.mode, force: ARGS.force });

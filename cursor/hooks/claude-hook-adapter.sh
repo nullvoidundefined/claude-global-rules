@@ -12,7 +12,7 @@
 # hook scripts in ~/.claude/hooks/ stay untouched, so a fix there reaches
 # both tools.
 #
-# Usage (from ~/.claude/cursor/hooks.json):
+# Usage (from ~/.cursor/hooks.json; this file is copied there by cursor/build.mjs):
 #   claude-hook-adapter.sh <cursorEvent> <hook-name> [<hook-name> ...]
 # where <hook-name> is a basename in ~/.claude/hooks/ without ".sh".
 #
@@ -46,7 +46,7 @@
 #
 # Manual test:
 #   printf '{"command":"ls -la","cwd":"/tmp","workspace_roots":["/tmp"]}' \
-#     | ~/.claude/cursor/hooks/claude-hook-adapter.sh beforeShellExecution secret-scan no-em-dash
+#     | ~/.cursor/hooks/claude-hook-adapter.sh beforeShellExecution secret-scan no-em-dash
 # Should print {"permission":"allow"}.
 
 set -uo pipefail
@@ -55,10 +55,12 @@ EVENT="${1:-}"
 shift || true
 HOOK_NAMES=("$@")
 
-ADAPTER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLAUDE_HOOKS_DIR="${CLAUDE_HOOKS_DIR:-$(cd "$ADAPTER_DIR/../../hooks" 2>/dev/null && pwd)}"
-STATE_DIR="${CLAUDE_CURSOR_STATE_DIR:-$HOME/.claude/.cursor-hook-state}"
-SETTINGS_FILE="${CLAUDE_SETTINGS_FILE:-$HOME/.claude/settings.json}"
+# The Claude Code configuration this port was generated from. Overridable so
+# the fixture tests can run against a checkout that is not at ~/.claude.
+CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
+CLAUDE_HOOKS_DIR="${CLAUDE_HOOKS_DIR:-$CLAUDE_HOME/hooks}"
+STATE_DIR="${CLAUDE_CURSOR_STATE_DIR:-$CLAUDE_HOME/.cursor-hook-state}"
+SETTINGS_FILE="${CLAUDE_SETTINGS_FILE:-$CLAUDE_HOME/settings.json}"
 
 INPUT=$(cat 2>/dev/null || true)
 [ -n "$INPUT" ] || INPUT='{}'
@@ -183,7 +185,7 @@ record_finding() {
 
 # --- the Bash(...) and Read(...) rules of settings.json -------------------------
 # shellcheck source=../../enforce/settingsPermissionRules.sh
-source "$ADAPTER_DIR/../../enforce/settingsPermissionRules.sh" 2>/dev/null || true
+source "$CLAUDE_HOME/enforce/settingsPermissionRules.sh" 2>/dev/null || true
 
 apply_bash_permission_rules() {
   local cmd="$1" rule

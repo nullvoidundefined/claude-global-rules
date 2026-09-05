@@ -7,8 +7,15 @@
  * holds the source loaders, the substitution primitive, the skill overrides,
  * the shared command bodies, and the --check / --write / --print driver, so
  * the two build scripts contain only what differs between the tools.
+ *
+ * A port is written into a directory that sits beside ~/.claude (~/.cursor,
+ * ~/.codex), never inside the repository. The driver records what it wrote in
+ * a manifest there, refuses to overwrite a file it did not write, and removes
+ * only files it wrote earlier that the build no longer produces.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, readlinkSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, readlinkSync, rmSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -202,51 +209,96 @@ export function agentDispatchText(agent, subagentNoun) {
 
 // --- driver -----------------------------------------------------------------------
 
-function listGeneratedOnDisk(outDir, subdirs, topLevelFiles) {
-  const found = [];
-  const walk = (dir) => {
-    if (!existsSync(dir)) return;
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      if (statSync(full).isDirectory()) walk(full);
-      else if (readFileSync(full, "utf8").includes(GENERATED_PREFIX)) found.push(relative(outDir, full));
-    }
-  };
-  for (const sub of subdirs) walk(join(outDir, sub));
-  for (const file of topLevelFiles) {
-    const full = join(outDir, file);
-    if (existsSync(full) && readFileSync(full, "utf8").includes(GENERATED_PREFIX)) found.push(file);
-  }
-  return found;
+export const MANIFEST_NAME = ".claude-port.json";
+
+function sha256(text) {
+  return createHash("sha256").update(text).digest("hex");
 }
 
-export function runPortBuild({ builder, outDir, subdirs, topLevelFiles, buildAll, mode = process.argv[2] ?? "--check" }) {
-  const files = buildAll();
-  const stale = listGeneratedOnDisk(outDir, subdirs, topLevelFiles).filter((path) => !(path in files));
+function readManifest(outDir) {
+  const path = join(outDir, MANIFEST_NAME);
+  if (!existsSync(path)) return null;
+  try {
+    return JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+export function parsePortArgs(argv, { defaultOutDir }) {
+  const args = { mode: "--check", outDir: defaultOutDir, project: null, force: false };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--check" || arg === "--write" || arg === "--print") args.mode = arg;
+    else if (arg === "--out") args.outDir = resolve(argv[++index] ?? "");
+    else if (arg === "--project") args.project = resolve(argv[++index] ?? "");
+    else if (arg === "--force") args.force = true;
+    else throw new Error(`unknown argument ${arg}; use --check | --write | --print [--out <dir>] [--project <repo>] [--force]`);
+  }
+  if (args.project && args.outDir === defaultOutDir) args.outDir = null;
+  return args;
+}
+
+export function homeDir() {
+  return process.env.HOME || homedir();
+}
+
+export function runPortBuild({ builder, files, outDir, mode, force = false }) {
+  const manifest = readManifest(outDir);
+  const owned = new Set(Object.keys(manifest?.files ?? {}));
   if (mode === "--print") {
     for (const path of Object.keys(files).sort()) console.log(path);
     return;
   }
-  if (mode === "--write") {
+  if (mode === "--check") {
+    if (!manifest || manifest.builder !== builder) {
+      console.error(`${builder} --check: ${outDir} holds no build from this builder; run: node ${builder} --write`);
+      process.exit(1);
+    }
+    const drift = [];
     for (const [path, content] of Object.entries(files)) {
       const full = join(outDir, path);
-      mkdirSync(dirname(full), { recursive: true });
-      writeFileSync(full, content);
+      if (!existsSync(full) || readFileSync(full, "utf8") !== content) drift.push(path);
     }
-    for (const path of stale) rmSync(join(outDir, path));
-    console.log(`${builder}: wrote ${Object.keys(files).length} files${stale.length ? `, removed ${stale.length} stale` : ""}`);
+    for (const path of owned) if (!(path in files)) drift.push(`${path} (stale)`);
+    if (drift.length > 0) {
+      console.error(`${builder} --check: ${drift.length} file(s) in ${outDir} out of date, run: node ${builder} --write\n  ${drift.join("\n  ")}`);
+      process.exit(1);
+    }
+    console.log(`${builder} --check: ${Object.keys(files).length} files in ${outDir} in sync`);
     return;
   }
-  if (mode !== "--check") throw new Error(`unknown mode ${mode}; use --check, --write, or --print`);
-  const drift = [];
-  for (const [path, content] of Object.entries(files)) {
-    const full = join(outDir, path);
-    if (!existsSync(full) || readFileSync(full, "utf8") !== content) drift.push(path);
-  }
-  drift.push(...stale.map((path) => `${path} (stale)`));
-  if (drift.length > 0) {
-    console.error(`${builder} --check: ${drift.length} file(s) out of date, run: node ${builder} --write\n  ${drift.join("\n  ")}`);
+  if (mode !== "--write") throw new Error(`unknown mode ${mode}`);
+  const conflicts = Object.keys(files).filter((path) => existsSync(join(outDir, path)) && !owned.has(path));
+  if (conflicts.length > 0 && !force) {
+    console.error(
+      `${builder} --write: ${outDir} already holds ${conflicts.length} file(s) this build did not write, so nothing was written:\n  ${conflicts.join("\n  ")}\nMove each aside (mv <file> <file>.bak) and re-run, or pass --force to overwrite them.`,
+    );
     process.exit(1);
   }
-  console.log(`${builder} --check: ${Object.keys(files).length} files in sync`);
+  mkdirSync(outDir, { recursive: true });
+  const written = {};
+  for (const [path, content] of Object.entries(files)) {
+    const full = join(outDir, path);
+    mkdirSync(dirname(full), { recursive: true });
+    writeFileSync(full, content);
+    if (path.endsWith(".sh")) chmodSync(full, 0o755);
+    written[path] = sha256(content);
+  }
+  let removed = 0;
+  let kept = [];
+  for (const path of owned) {
+    if (path in files) continue;
+    const full = join(outDir, path);
+    if (!existsSync(full)) continue;
+    if (sha256(readFileSync(full, "utf8")) === manifest.files[path]) {
+      rmSync(full);
+      removed += 1;
+    } else {
+      kept.push(path);
+    }
+  }
+  writeFileSync(join(outDir, MANIFEST_NAME), `${JSON.stringify({ builder, files: written }, null, 2)}\n`);
+  console.log(`${builder}: wrote ${Object.keys(files).length} files into ${outDir}${removed ? `, removed ${removed} stale` : ""}`);
+  if (kept.length > 0) console.error(`${builder}: left ${kept.length} stale file(s) that were edited after this build wrote them: ${kept.join(", ")}`);
 }

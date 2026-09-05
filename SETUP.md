@@ -84,25 +84,23 @@ suites, then `package.json` `test` plus `typecheck`/`type-check`, then
 
 ## Cursor and OpenAI Codex
 
-The same rules and hooks are available to Cursor from `cursor/` and to OpenAI
-Codex from `openai/`, both generated from the files above (`node
-cursor/build.mjs --write`, `node openai/build.mjs --write`). After the install
-steps:
+The same rules and hooks are available to Cursor and to OpenAI Codex from two
+sibling directories generated out of this one:
 
 ```
-bash ~/.claude/cursor/install.sh
-bash ~/.claude/openai/install.sh
+node ~/.claude/cursor/build.mjs --write     # writes ~/.cursor
+node ~/.claude/openai/build.mjs --write     # writes ~/.codex
 ```
 
-The first symlinks `~/.cursor/rules`, `~/.cursor/hooks.json`, `~/.cursor/agents`,
-`~/.cursor/commands`, and `~/.cursor/skills` into the Cursor port; the second
-symlinks `~/.codex/AGENTS.md`, `~/.codex/hooks.json`, `~/.codex/skills`, and
-`~/.codex/agents` into the Codex port. Both refuse to replace anything they did
-not create. Restart Cursor and check Settings > Rules and Settings > Hooks; in
-Codex run `/hooks` to review and trust the hook entries (trust is per content
-hash, so every change to a hook needs a fresh trust) and `/skills` to see the
-skills. If a Cursor build does not read a user-level rules directory,
-`bash ~/.claude/cursor/install.sh --project <repo>` copies the rules and
-`hooks.json` into that repo's `.cursor/` instead. `cursor/README.md` and
-`openai/README.md` carry the per-event fidelity tables and the caveats; the
-two `PORT-STATUS.md` files the per-hook tables.
+Each build refuses to overwrite a file it did not write (an existing
+`~/.codex/AGENTS.md` is the usual case: move it aside, or pass `--force`),
+records what it wrote in `.claude-port.json` in the target, and reports drift
+with `--check`. Re-run both after every pull of `~/.claude`. Then restart
+Cursor and check Settings > Rules and Settings > Hooks; in Codex run `/hooks`
+to review and trust the hook entries (trust is per content hash, so every
+change to a hook needs a fresh trust) and `/skills` to see the skills. If a
+Cursor build does not read a user-level rules directory,
+`node ~/.claude/cursor/build.mjs --write --project <repo>` builds into that
+repo's `.cursor/` instead. `cursor/README.md` and `openai/README.md` carry the
+per-event fidelity tables and the caveats; each target's `PORT-STATUS.md` the
+per-hook table.

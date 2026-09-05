@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
-# openai-port.test.sh: the Codex port stays generated from its sources, and
-# the Codex adapter turns Codex payloads into the decisions the Claude Code
-# hooks make.
+# openai-port.test.sh: the Codex port builds cleanly into a directory beside
+# ~/.claude, and the Codex adapter turns Codex payloads into the decisions the
+# Claude Code hooks make.
 #
-# Invariants:
-#   1. openai/build.mjs --check passes on the committed tree.
+# Invariants (the build targets a temporary directory, never ~/.codex):
+#   1. --write produces the tree with a manifest and --check passes; a
+#      foreign AGENTS.md in the target makes --write refuse; --project is
+#      rejected (Codex has no project-level build here).
 #   2. AGENTS.md stays under the 24 KiB share of Codex's 32 KiB budget and
 #      carries the session-types table; hooks.json is Claude Code's schema
-#      with every command routed through the adapter and no `if` fields;
-#      every agent role is a TOML file with developer_instructions; nothing
-#      generated contains an em dash (R-207).
+#      with every command routed through the adapter beside it and no `if`
+#      fields; every agent role is a TOML file with developer_instructions;
+#      nothing generated contains an em dash (R-207).
 #   3. The adapter denies a secret on argv, mirrors the settings.json deny
 #      rules, turns an ask into a deny by default and into context under
 #      CLAUDE_CODEX_ASK_POLICY=allow, replays an apply_patch so the em-dash
@@ -18,43 +20,48 @@
 #      silent on a clean call, and fails open on garbage input.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-ADAPTER="$ROOT/openai/hooks/codex-hook-adapter.sh"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
+OUT="$TMP/codex"
 export CLAUDE_FIRE_LOG=/dev/null
+export CLAUDE_HOME="$ROOT"
 export CLAUDE_CODEX_STATE_DIR="$TMP/state"
-export CLAUDE_SETTINGS_FILE="$ROOT/settings.json"
-export CLAUDE_HOOKS_DIR="$ROOT/hooks"
 
 fail() { echo "FAIL: $1"; exit 1; }
 EM_DASH=$(printf '\xe2\x80\x94')
 
-# 1. Generated tree is fresh.
-node "$ROOT/openai/build.mjs" --check >/dev/null 2>"$TMP/check.err" \
-  || fail "openai/ is out of date with its sources: $(head -3 "$TMP/check.err")"
+# 1. The build.
+node "$ROOT/openai/build.mjs" --write --out "$OUT" >/dev/null 2>"$TMP/err" || fail "build failed: $(head -3 "$TMP/err")"
+[ -f "$OUT/.claude-port.json" ] || fail "no manifest written"
+node "$ROOT/openai/build.mjs" --check --out "$OUT" >/dev/null 2>&1 || fail "--check fails right after --write"
+mkdir -p "$TMP/taken" && printf '# mine\n' >"$TMP/taken/AGENTS.md"
+node "$ROOT/openai/build.mjs" --write --out "$TMP/taken" >/dev/null 2>&1 && fail "--write must refuse a target holding an AGENTS.md it did not write"
+[ "$(cat "$TMP/taken/AGENTS.md")" = "# mine" ] || fail "a refused write must leave the foreign AGENTS.md untouched"
+node "$ROOT/openai/build.mjs" --write --project "$TMP" >/dev/null 2>&1 && fail "--project must be rejected for the Codex port"
 
 # 2. Shape of the port.
-AGENTS_BYTES=$(wc -c <"$ROOT/openai/AGENTS.md" | tr -d ' ')
+ADAPTER="$OUT/hooks/codex-hook-adapter.sh"
+[ -x "$ADAPTER" ] || fail "adapter not written executable into the target"
+AGENTS_BYTES=$(wc -c <"$OUT/AGENTS.md" | tr -d ' ')
 [ "$AGENTS_BYTES" -le 24576 ] || fail "AGENTS.md is $AGENTS_BYTES bytes, over the 24 KiB share of Codex's project_doc_max_bytes"
-grep -q '^## Session types' "$ROOT/openai/AGENTS.md" || fail "AGENTS.md lacks the session-types section"
-grep -q 'hook:task-commit-reminder in Claude Code; manual in Codex' "$ROOT/openai/AGENTS.md" || fail "un-ported hook tags are not annotated"
-grep -q '\[hook:no-em-dash\]$' "$ROOT/openai/AGENTS.md" || fail "ported hook tags must stay untouched"
-jq -e '.hooks.PreToolUse and .hooks.PostToolUse and .hooks.SessionStart and .hooks.Stop and .hooks.SessionEnd' "$ROOT/openai/hooks.json" >/dev/null || fail "hooks.json lacks a Codex event"
-jq -e '[.hooks[][] | .hooks[] | select(.type != "command" or (.command | startswith("~/.claude/openai/hooks/codex-hook-adapter.sh ") | not))] | length == 0' "$ROOT/openai/hooks.json" >/dev/null || fail "every hooks.json command must route through the adapter"
-jq -e '[.. | objects | select(has("if"))] | length == 0' "$ROOT/openai/hooks.json" >/dev/null || fail "hooks.json must not carry if-gated groups (Codex has no if)"
-jq -e '[.hooks.SessionEnd[].hooks[].timeout] | all(. <= 3)' "$ROOT/openai/hooks.json" >/dev/null || fail "SessionEnd handlers must respect Codex's 3s cap"
-for name in $(jq -r '.hooks[][] | .hooks[].command' "$ROOT/openai/hooks.json" | sed 's#^~/.claude/openai/hooks/codex-hook-adapter.sh ##' | tr ' ' '\n' | sort -u); do
+grep -q '^## Session types' "$OUT/AGENTS.md" || fail "AGENTS.md lacks the session-types section"
+grep -q 'hook:task-commit-reminder in Claude Code; manual in Codex' "$OUT/AGENTS.md" || fail "un-ported hook tags are not annotated"
+grep -q '\[hook:no-em-dash\]$' "$OUT/AGENTS.md" || fail "ported hook tags must stay untouched"
+jq -e '.hooks.PreToolUse and .hooks.PostToolUse and .hooks.SessionStart and .hooks.Stop and .hooks.SessionEnd' "$OUT/hooks.json" >/dev/null || fail "hooks.json lacks a Codex event"
+jq -e '[.hooks[][] | .hooks[] | select(.type != "command" or (.command | startswith("~/.codex/hooks/codex-hook-adapter.sh ") | not))] | length == 0' "$OUT/hooks.json" >/dev/null || fail "every hooks.json command must route through the adapter beside it"
+jq -e '[.. | objects | select(has("if"))] | length == 0' "$OUT/hooks.json" >/dev/null || fail "hooks.json must not carry if-gated groups (Codex has no if)"
+jq -e '[.hooks.SessionEnd[].hooks[].timeout] | all(. <= 3)' "$OUT/hooks.json" >/dev/null || fail "SessionEnd handlers must respect Codex's 3s cap"
+for name in $(jq -r '.hooks[][] | .hooks[].command' "$OUT/hooks.json" | sed 's#^~/.codex/hooks/codex-hook-adapter.sh ##' | tr ' ' '\n' | sort -u); do
   [ -x "$ROOT/hooks/$name.sh" ] || fail "hooks.json names hooks/$name.sh, which is missing or not executable"
 done
-[ "$(ls "$ROOT"/openai/agents/*.toml | wc -l | tr -d ' ')" = "$(ls "$ROOT"/agents/*.md | wc -l | tr -d ' ')" ] || fail "one TOML role per agent expected"
-for role in "$ROOT"/openai/agents/*.toml; do
+[ "$(ls "$OUT"/agents/*.toml | wc -l | tr -d ' ')" = "$(ls "$ROOT"/agents/*.md | wc -l | tr -d ' ')" ] || fail "one TOML role per agent expected"
+for role in "$OUT"/agents/*.toml; do
   grep -q '^developer_instructions = ' "$role" || fail "$(basename "$role") lacks developer_instructions"
 done
-[ -f "$ROOT/openai/skills/session-start/SKILL.md" ] || fail "session-start skill missing"
-[ -f "$ROOT/openai/skills/protocol/SKILL.md" ] && ! grep -q '```!' "$ROOT/openai/skills/protocol/SKILL.md" || fail "protocol skill must not carry a shell include"
-grep -rq "$EM_DASH" "$ROOT/openai" && fail "an em dash reached the generated port (R-207)"
-[ -x "$ADAPTER" ] || fail "adapter is not executable"
-[ -x "$ROOT/openai/install.sh" ] || fail "install.sh is not executable"
+[ -f "$OUT/skills/session-start/SKILL.md" ] || fail "session-start skill missing"
+grep -q '```!' "$OUT/skills/protocol/SKILL.md" && fail "protocol skill must not carry a shell include"
+grep -rq "$EM_DASH" "$OUT" && fail "an em dash reached the generated port (R-207)"
+[ -f "$OUT/PORT-STATUS.md" ] || fail "PORT-STATUS.md missing"
 
 # 3. Adapter decisions.
 run() { printf '%s' "$1" | "$ADAPTER" "${@:2}" 2>/dev/null; }

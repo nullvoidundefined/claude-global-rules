@@ -119,20 +119,13 @@ The design goal is to migrate prose down to mechanical as enforcement paths get 
 │   ├── rules/                       # 7 custom ESLint rules (R-319, R-316/317, R-320, R-325, R-342, R-343, R-344).
 │   └── tests/                       # 43 fixture tests; run-tests.sh runs them all.
 ├── .github/workflows/enforce.yml    # CI: both fixture suites + the ratchet.
-├── cursor/                          # The Cursor port. See cursor/README.md.
-│   ├── build.mjs                    # Renders rules/, agents/, commands/, skills/ from the sources above.
-│   ├── hooks.json                   # Cursor hook wiring: every event calls the adapter.
-│   ├── hooks/claude-hook-adapter.sh # Cursor <-> Claude Code hook protocol; runs hooks/*.sh unchanged.
-│   ├── install.sh                   # Symlinks ~/.cursor/{rules,hooks.json,agents,commands,skills} here.
-│   ├── PORT-STATUS.md               # Generated: which hooks and permission layers port, and why not.
-│   └── rules/                       # Generated .mdc rules: 3 always-on, 9 glob-attached, 13 on demand.
-├── openai/                          # The OpenAI Codex port. See openai/README.md.
-│   ├── build.mjs                    # Renders AGENTS.md, hooks.json, skills/, agents/ from the sources above.
-│   ├── AGENTS.md                    # Generated: CLAUDE.md plus the session-types table, under Codex's 32 KiB budget.
-│   ├── hooks.json                   # Generated from settings.json: same schema, every command via the adapter.
-│   ├── hooks/codex-hook-adapter.sh  # Replays apply_patch as file edits; translates the ask decision.
-│   ├── install.sh                   # Symlinks ~/.codex/{AGENTS.md,hooks.json,skills,agents} here.
-│   └── PORT-STATUS.md               # Generated: which hooks and permission layers port, and why not.
+├── cursor/                          # Generators for the Cursor port, built into ~/.cursor. See cursor/README.md.
+│   ├── build.mjs                    # Renders rules, agents, commands, skills, hooks.json into ~/.cursor (nothing generated is tracked here).
+│   ├── hooks.json                   # Source of the Cursor hook wiring: every event calls the adapter.
+│   └── hooks/claude-hook-adapter.sh # Cursor <-> Claude Code hook protocol; runs hooks/*.sh unchanged.
+├── openai/                          # Generators for the OpenAI Codex port, built into ~/.codex. See openai/README.md.
+│   ├── build.mjs                    # Renders AGENTS.md, hooks.json (from settings.json), skills, agent roles into ~/.codex.
+│   └── hooks/codex-hook-adapter.sh  # Replays apply_patch as file edits; translates the ask decision.
 ├── rules/                           # Auto-load zone: session-types.md + path-scoped
 │   │                                # symlinks to the stack CLAUDE-*.md files.
 ├── rulebook/                        # Tier-2 rule files loaded by session type.
@@ -228,12 +221,16 @@ In order:
 
 ## Using the same rules from Cursor and OpenAI Codex
 
-The repository root is the Claude Code configuration (it is installed as `~/.claude`). Two sibling folders carry the same configuration in the shapes two other agents read, and both are generated from the root, so every rule is still written once:
+Three sibling directories, one per agent. `~/.claude` (this repository) is the Claude Code configuration and the single source. `~/.cursor` is what Cursor reads and `~/.codex` is what OpenAI Codex reads (the CLI, the IDE extension, and the cloud agent behind ChatGPT; ChatGPT's chat interface reads no files). Both are generated from this repository and hold nothing hand-written:
 
-- **`cursor/`** for Cursor: `.mdc` rules (always-on, glob-attached, or agent-requested), a `hooks.json`, subagents, slash commands, and all thirteen skills. `bash ~/.claude/cursor/install.sh` points `~/.cursor` at it.
-- **`openai/`** for OpenAI Codex (the CLI, the IDE extension, and the cloud agent behind ChatGPT): a global `AGENTS.md`, a `hooks.json` in Claude Code's own schema, custom agent roles, and the skills plus the session procedures as skills. `bash ~/.claude/openai/install.sh` points `~/.codex` at it. ChatGPT's chat interface reads no files; the port is for the Codex agent it delegates to.
+```
+node ~/.claude/cursor/build.mjs --write     # writes ~/.cursor
+node ~/.claude/openai/build.mjs --write     # writes ~/.codex
+```
 
-The hooks run unchanged under both tools. Each port has one adapter script (`cursor/hooks/claude-hook-adapter.sh`, `openai/hooks/codex-hook-adapter.sh`) that turns that tool's hook events into the Claude Code payloads the scripts already read and turns their decisions back, so 38 of the 42 hooks enforce under Cursor and 39 under Codex, along with the `Bash(...)` permission rules from `settings.json`. `enforce/tests/cursor-port.test.sh` and `enforce/tests/openai-port.test.sh` fail the suite when a port is stale or an adapter stops making the same decisions as the hooks. Fidelity per event and the caveats are in [`cursor/README.md`](./cursor/README.md) and [`openai/README.md`](./openai/README.md); the per-hook tables are the two `PORT-STATUS.md` files.
+`~/.cursor` gets `.mdc` rules (always-on, glob-attached, or agent-requested), `hooks.json`, subagents, slash commands, and all thirteen skills. `~/.codex` gets a global `AGENTS.md`, a `hooks.json` in Claude Code's own schema, custom agent roles, and the skills plus the session procedures as skills. Each build records what it wrote in a manifest in the target directory, refuses to overwrite a file it did not write, removes only its own stale files, and `--check` reports when the target is behind the sources. Re-run after every pull; the generated trees are not tracked in this repository, so every rule is still written exactly once, here.
+
+The hooks run unchanged under both tools. Each port has one adapter script (`cursor/hooks/claude-hook-adapter.sh`, `openai/hooks/codex-hook-adapter.sh`, copied into the target's `hooks/`) that turns that tool's hook events into the Claude Code payloads the scripts already read and turns their decisions back, so 38 of the 42 hooks enforce under Cursor and 39 under Codex, along with the `Bash(...)` permission rules from `settings.json`. `enforce/tests/cursor-port.test.sh` and `enforce/tests/openai-port.test.sh` build each port into a temporary directory and check its shape and every adapter decision. Fidelity per event and the caveats are in [`cursor/README.md`](./cursor/README.md) and [`openai/README.md`](./openai/README.md); each build also writes a `PORT-STATUS.md` with the per-hook table into its target.
 
 ## Running this repo on your own machine
 
