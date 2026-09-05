@@ -82,7 +82,7 @@ if [ "$is_dockerfile" -eq 0 ]; then
       artifact="service entry file" ;;
     */next.config.js | */next.config.mjs | */next.config.ts | */vite.config.js | */vite.config.mjs | */vite.config.ts)
       artifact="frontend build config" ;;
-    */railway.toml | */railway.json | */fly.toml | */render.yaml | */vercel.json | */Procfile | */app.yaml | */nixpacks.toml)
+    */railway.toml | */railway.json | */fly.toml | */render.yaml | */Procfile | */app.yaml | */nixpacks.toml)
       artifact="platform deploy config" ;;
     */package.json)
       printf '%s\n' "$content" | grep -qE '"start"[[:space:]]*:' && artifact="package.json with a start script" ;;
