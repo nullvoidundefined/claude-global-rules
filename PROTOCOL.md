@@ -153,7 +153,7 @@ The canonical work sequence:
 4. **Verify**: run tests, lint, format, build. Confirm every success claim with evidence.
 5. **Commit**: one logical change per commit, conventional subjects, paired tests where required.
 6. **Push**: trigger CI and deployment workflows.
-7. **Monitor**: poll all four deploy surfaces (GitHub Actions, Railway, Vercel, production health endpoints) at ~20-30 second intervals for up to 5 minutes. Never claim a deploy is done because `git push` returned zero.
+7. **Monitor**: poll all three deploy surfaces (GitHub Actions, Railway, production health endpoints) at ~20-30 second intervals for up to 5 minutes. Never claim a deploy is done because `git push` returned zero.
 
 Model routing is part of process, not afterthought:
 

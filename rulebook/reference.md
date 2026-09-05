@@ -552,6 +552,6 @@ Read on demand, not globally.
 | `~/.claude/CLAUDE-FRONTEND-VITE.md` | Vite + TanStack Router SPA structure, entry files, `VITE_*` env vars |
 | `~/.claude/CLAUDE-DATABASE.md` | Postgres migrations, SQL queries, schema |
 | `~/.claude/CLAUDE-STYLING.md` | SCSS modules, CSS custom properties |
-| `~/.claude/CLOUD-DEPLOYMENT.md` | Railway, Vercel, Cloudflare, environment variables |
+| `~/.claude/CLOUD-DEPLOYMENT.md` | Railway, Cloudflare, environment variables |
 | `/known-issues` (skill) | Before production deploy or debugging prior-incident-like failure |
 | `/protocol` (skill) | Debugging process failure, reviewing rule origin, onboarding |

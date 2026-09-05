@@ -35,14 +35,14 @@ These are hard rules. No exceptions, no shortcuts to facilitate a deploy.
 ### Secrets
 
 - **Never commit `.env` files** containing real credentials. `.env` is for local dev only and must be in `.gitignore`.
-- **Never hardcode API keys, passwords, or tokens** in source code. In production, set them as **secret/sealed** env vars on the hosting platform (Railway for the backend, Vercel for the frontend); use `.env` files locally.
+- **Never hardcode API keys, passwords, or tokens** in source code. In production, set them as **secret/sealed** env vars on the Railway service that needs them (backend and frontend images alike); use `.env` files locally.
 - **Set secrets on every service that needs them.** Railway variables are per-service; a value set on one service is not shared with another.
 
 ### CORS
 
 - **Never use `origin: '*'` with `credentials: true`**.
 - `CORS_ORIGIN` must always be set to the exact production frontend URL in Railway. Never use `localhost` in production.
-- For Railway-hosted frontends, use the custom domain (e.g., `your-app.com`). For Vercel-hosted frontends, use the team-scoped stable URL.
+- Frontends are Railway-hosted containers (R-351); use the custom domain (e.g., `your-app.com`).
 
 ---
 
@@ -145,7 +145,7 @@ A Railway cron is an ordinary service that shares the app image but overrides th
 
 Secrets live in the hosting platform's env var store. There is no external secret manager (no GCP Secret Manager, no Doppler). The app reads everything from `process.env` directly, validated through a Zod env schema where one exists.
 
-- **Production:** set each secret as a **secret/sealed** env var on the Railway service that needs it (and on Vercel for any frontend secret). Set on every service separately; Railway variables are per-service.
+- **Production:** set each secret as a **secret/sealed** env var on the Railway service that needs it, the frontend service included. Set on every service separately; Railway variables are per-service.
 - **Local development:** set values in the package's `.env` file (gitignored). Never commit real credentials.
 - **Never print a secret.** Do not `console.log` secret values; check Railway log output after a deploy to confirm none leaked.
 
