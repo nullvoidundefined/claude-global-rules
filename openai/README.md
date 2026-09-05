@@ -12,6 +12,10 @@ node ~/.claude/openai/build.mjs --write
 
 That writes `~/.codex/AGENTS.md`, `~/.codex/hooks.json`, `~/.codex/hooks/codex-hook-adapter.sh`, `~/.codex/skills`, `~/.codex/agents`, and `~/.codex/PORT-STATUS.md`, and records what it wrote in `~/.codex/.claude-port.json`. It refuses to overwrite a file it did not write (an existing `~/.codex/AGENTS.md` is the usual case: move it aside, or pass `--force`), removes only its own stale files on the next run, and leaves everything else in `~/.codex` alone, including `config.toml`. Re-run after every pull of `~/.claude`; `--check` says whether `~/.codex` is behind the sources. Then, in a Codex session, `/hooks` lists the hook entries for you to trust (Codex trusts hooks by content hash, so every change to a hook script or to `hooks.json` needs a fresh trust) and `/skills` shows the skills. The repository has to live at `~/.claude`: `AGENTS.md` points at `~/.claude/...` for every on-demand read and the adapter runs the hooks from `~/.claude/hooks/`.
 
+## Repository
+
+`~/.codex` is a clone of [`openai-global-rules`](https://github.com/nullvoidundefined/openai-global-rules), the way `~/.claude` is a clone of `claude-global-rules`. The build writes into the clone; a rebuild is committed and pushed there (the generated `README.md` in the target carries the two commands). The generated `.gitignore` is an allowlist of the built files, so the state the tool keeps in the same directory never reaches the repository. SETUP.md in `~/.claude` has the one-time clone steps for a directory that already exists.
+
 ## After a rule change
 
 Run the build again. Each Claude Code-specific sentence is rewritten through a substitution whose needle must still exist in the source, so a source edit that moves it fails the build rather than emitting stale prose. `AGENTS.md` is size-checked: Codex loads every AGENTS.md in one 32 KiB budget (`project_doc_max_bytes`), so the global file stays under 24 KiB to leave room for project files. `hooks.json` is derived from `settings.json`, so a new hook there needs only a `NOT_PORTED` reason in `build.mjs` when it belongs to an event Codex lacks.

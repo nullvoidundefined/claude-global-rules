@@ -44,6 +44,8 @@ import {
   parseFrontmatter,
   parsePortArgs,
   readSource,
+  renderAllowlistGitignore,
+  renderPortReadme,
   runPortBuild,
   splitFrontmatter,
   substitute,
@@ -384,7 +386,7 @@ function buildAll() {
   if (hooksConfig.version !== 1) throw new Error("cursor/hooks.json: version must be 1");
   const { names: ported, events: portedEvents } = portedHooks(hooksConfig);
   const agents = loadAgents();
-  return {
+  const files = {
     "hooks.json": hooksSource.split(ADAPTER_PLACEHOLDER).join(ADAPTER),
     "hooks/claude-hook-adapter.sh": readSource("cursor/hooks/claude-hook-adapter.sh"),
     "rules/000-global-rules.mdc": buildGlobalRules(ported),
@@ -399,7 +401,10 @@ function buildAll() {
     ...buildCommands(agents),
     ...buildSkills(),
     "PORT-STATUS.md": buildPortStatus(hooksConfig, portedEvents),
+    "README.md": renderPortReadme({ builder: BUILDER, targetName: ARGS.project ? "<repo>/.cursor" : "~/.cursor", toolName: "Cursor", repoName: "cursor-global-rules" }),
   };
+  files[".gitignore"] = renderAllowlistGitignore(Object.keys(files));
+  return files;
 }
 
 runPortBuild({ builder: BUILDER, files: buildAll(), outDir: OUT_DIR, mode: ARGS.mode, force: ARGS.force });

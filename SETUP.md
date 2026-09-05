@@ -84,23 +84,58 @@ suites, then `package.json` `test` plus `typecheck`/`type-check`, then
 
 ## Cursor and OpenAI Codex
 
-The same rules and hooks are available to Cursor and to OpenAI Codex from two
-sibling directories generated out of this one:
+The same rules and hooks reach Cursor and OpenAI Codex through two sibling
+repositories generated out of this one: `cursor-global-rules` is cloned at
+`~/.cursor` and `openai-global-rules` at `~/.codex`.
+
+First time only, on the machine that holds `~/.claude`: create the two
+repositories on GitHub (empty, no README), build each port into its
+directory, and push the first build. Both tools keep their own state in those
+directories, so the build goes into the existing directory and the
+allowlist `.gitignore` it writes keeps that state out of the repository:
 
 ```
-node ~/.claude/cursor/build.mjs --write     # writes ~/.cursor
-node ~/.claude/openai/build.mjs --write     # writes ~/.codex
+gh repo create nullvoidundefined/cursor-global-rules --private
+gh repo create nullvoidundefined/openai-global-rules --private
+node ~/.claude/cursor/build.mjs --write && cd ~/.cursor && git init -q && git add -A && \
+  git commit -q -m "feat: initial build from claude-global-rules" && git branch -M main && \
+  git remote add origin git@github.com:nullvoidundefined/cursor-global-rules.git && git push -u origin main
+node ~/.claude/openai/build.mjs --write && cd ~/.codex && git init -q && git add -A && \
+  git commit -q -m "feat: initial build from claude-global-rules" && git branch -M main && \
+  git remote add origin git@github.com:nullvoidundefined/openai-global-rules.git && git push -u origin main
 ```
 
-Each build refuses to overwrite a file it did not write (an existing
+On every other machine, the clone goes into the existing directory rather
+than replacing it:
+
+```
+for pair in "cursor cursor-global-rules" "codex openai-global-rules"; do
+  set -- $pair
+  mkdir -p "$HOME/.$1" && cd "$HOME/.$1" && git init -q && \
+    git remote add origin "git@github.com:nullvoidundefined/$2.git" && \
+    git fetch -q origin && git checkout -b main origin/main
+done
+```
+
+The checked-in `.gitignore` in each is an allowlist: only the generated files
+are tracked, so `auth.json`, `config.toml`, sessions, and logs stay local even
+after `git add -A`. To update after a pull of `~/.claude`:
+
+```
+node ~/.claude/cursor/build.mjs --write     # rewrites ~/.cursor
+node ~/.claude/openai/build.mjs --write     # rewrites ~/.codex
+cd ~/.cursor && git add -A && git commit -m "chore: rebuild from claude-global-rules" && git push
+cd ~/.codex  && git add -A && git commit -m "chore: rebuild from claude-global-rules" && git push
+```
+
+Each build refuses to overwrite a file it did not write (an existing hand-made
 `~/.codex/AGENTS.md` is the usual case: move it aside, or pass `--force`),
-records what it wrote in `.claude-port.json` in the target, and reports drift
-with `--check`. Re-run both after every pull of `~/.claude`. Then restart
-Cursor and check Settings > Rules and Settings > Hooks; in Codex run `/hooks`
-to review and trust the hook entries (trust is per content hash, so every
-change to a hook needs a fresh trust) and `/skills` to see the skills. If a
-Cursor build does not read a user-level rules directory,
-`node ~/.claude/cursor/build.mjs --write --project <repo>` builds into that
-repo's `.cursor/` instead. `cursor/README.md` and `openai/README.md` carry the
-per-event fidelity tables and the caveats; each target's `PORT-STATUS.md` the
-per-hook table.
+records what it wrote in `.claude-port.json`, and reports drift with
+`--check`. Then restart Cursor and check Settings > Rules and Settings > Hooks;
+in Codex run `/hooks` to review and trust the hook entries (trust is per
+content hash, so every rebuild that changes a hook needs a fresh trust) and
+`/skills` to see the skills. If a Cursor build does not read a user-level
+rules directory, `node ~/.claude/cursor/build.mjs --write --project <repo>`
+builds into that repo's `.cursor/` instead. `cursor/README.md` and
+`openai/README.md` carry the per-event fidelity tables and the caveats; each
+target's `PORT-STATUS.md` the per-hook table.

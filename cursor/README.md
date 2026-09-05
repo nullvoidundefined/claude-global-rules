@@ -18,6 +18,10 @@ node ~/.claude/cursor/build.mjs --write --project ~/code/some-repo
 
 which writes the same tree into `<repo>/.cursor/` with the adapter command made repo-relative. Either way the repository has to live at `~/.claude`: the rule bodies point at `~/.claude/...` for their on-demand reads, and the adapter runs the hooks from `~/.claude/hooks/`.
 
+## Repository
+
+`~/.cursor` is a clone of [`cursor-global-rules`](https://github.com/nullvoidundefined/cursor-global-rules), the way `~/.claude` is a clone of `claude-global-rules`. The build writes into the clone; a rebuild is committed and pushed there (the generated `README.md` in the target carries the two commands). The generated `.gitignore` is an allowlist of the built files, so the state the tool keeps in the same directory never reaches the repository. SETUP.md in `~/.claude` has the one-time clone steps for a directory that already exists.
+
 ## After a rule change
 
 Run the build again. Each Claude Code-specific sentence is rewritten through an explicit substitution whose needle must still exist in the source, so an edit to CLAUDE.md that moves one of those sentences fails the build with the needle it could not find, rather than emitting stale prose. Adding a hook to `settings.json` needs either a `cursor/hooks.json` entry or a `NOT_PORTED` reason in `build.mjs`, or the build fails.
