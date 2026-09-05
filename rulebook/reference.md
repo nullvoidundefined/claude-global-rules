@@ -103,6 +103,14 @@ R-208: Never praise without falsifiable reasoning; no softening, no compliment s
 R-209: Delete filler before sending: action announcements, question echoes, transitions, hedge words, sign-offs, apologies, trailing summaries, sentences starting with "I".
   Enforcement: manual
 
+R-210: Explain every technical term on first use in a message to the user.
+  Spec:
+  - The first mention of a tool, service, protocol term, or environment component carries one sentence: what it is, where it runs, and what it means for the user right now.
+  - The session's own environment (cloud sandbox, egress proxy, network policy, container, hook event) is covered the same as the codebase.
+  - A term the user introduced needs no explanation; a term the user has asked about is explained in the same reply, before anything else.
+  - Scope: chat replies, handoff docs, commit bodies, PR descriptions. Code comments and rule files follow R-206 instead.
+  Enforcement: manual (not decidable by pattern; the push judge reads diffs, not chat)
+
 ## Architecture and naming (R-3xx)
 
 Ordered macro to micro: monorepo, then application and layer boundaries, then directory taxonomy, then file, then intra-file structure.

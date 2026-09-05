@@ -37,6 +37,7 @@ R-206: Write model-facing instructions as direct imperatives; omit rationale. [m
 R-207: Never use U+2014 (em dash). [hook:no-em-dash]
 R-208: Never praise without falsifiable reasoning; no softening, no compliment sandwich. [manual]
 R-209: Delete filler before sending: action announcements, question echoes, transitions, hedge words, sign-offs, apologies, trailing summaries, sentences starting with "I". [manual]
+R-210: Explain every technical term on first use in a message to the user: what it is, where it runs, and why it matters to them; never name an infrastructure component (a proxy, sandbox, network policy, container, hook event) as a bare phrase. [manual]
 
 ## Architecture and naming (R-3xx), ordered macro to micro
 
