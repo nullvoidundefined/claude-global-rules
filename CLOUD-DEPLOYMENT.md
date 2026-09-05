@@ -106,7 +106,7 @@ railway list-variables --serviceId <id>
 
 ### Per-Service Dockerfiles
 
-Monorepo apps with both an API and a worker use separate Dockerfiles to control which entrypoint is run:
+Every deployable artifact is Dockerized from its first commit (R-351); the image is the deploy unit and Railway builds it from the Dockerfile, never with Nixpacks. The image contract (multi-stage, pinned base, non-root user, `HEALTHCHECK`, `.dockerignore`) is in `CLAUDE-BACKEND.md` under Containers. Monorepo apps with both an API and a worker use separate Dockerfiles to control which entrypoint is run:
 
 ```
 Dockerfile          # API service (CMD: node server/dist/index.js or packages/api/dist/index.js)
