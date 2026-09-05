@@ -50,19 +50,28 @@ if [ "$is_dockerfile" -eq 1 ]; then
     add "R-351: this Dockerfile never switches to a non-root user. Add \`USER node\` (or \`USER app\`) after the runtime stage's COPY lines."
   fi
   stage_names=$(printf '%s\n' "$content" | grep -ioE '^[[:space:]]*FROM[[:space:]].*[[:space:]]AS[[:space:]]+[A-Za-z0-9_.-]+' | awk '{print tolower($NF)}' | sort -u)
-  unpinned=$(printf '%s\n' "$content" | grep -iE '^[[:space:]]*FROM[[:space:]]' | sed -E 's/^[[:space:]]*[Ff][Rr][Oo][Mm][[:space:]]+//; s/--platform=[^[:space:]]+[[:space:]]+//' | awk '{print $1}' | while IFS= read -r image; do
+  # A `case` nested inside a `$( ... | while ... done )` command substitution
+  # fails to parse on Apple's frozen bash 3.2 (confirmed on 3.2.57, darwin25,
+  # arm64): the loop accumulates into $unpinned directly via process
+  # substitution instead, and grep -E replaces the case arms.
+  unpinned=""
+  while IFS= read -r image; do
     [ -z "$image" ] && continue
     lowered=$(printf '%s' "$image" | tr 'A-Z' 'a-z')
     [ "$lowered" = "scratch" ] && continue
     printf '%s\n' "$stage_names" | grep -qxF "$lowered" && continue
-    case "$image" in
-      *@sha256:*) continue ;;
-      *:latest) printf '%s ' "$image" ;;
-      */*:*) continue ;;
-      *:*) continue ;;
-      *) printf '%s ' "$image" ;;
-    esac
-  done)
+    if printf '%s' "$image" | grep -qE '@sha256:'; then
+      continue
+    elif printf '%s' "$image" | grep -qE ':latest$'; then
+      unpinned="$unpinned$image "
+    elif printf '%s' "$image" | grep -qE '/[^/]*:'; then
+      continue
+    elif printf '%s' "$image" | grep -qE ':'; then
+      continue
+    else
+      unpinned="$unpinned$image "
+    fi
+  done < <(printf '%s\n' "$content" | grep -iE '^[[:space:]]*FROM[[:space:]]' | sed -E 's/^[[:space:]]*[Ff][Rr][Oo][Mm][[:space:]]+//; s/--platform=[^[:space:]]+[[:space:]]+//' | awk '{print $1}')
   if [ -n "$unpinned" ]; then
     add "R-351: unpinned base image (${unpinned% }). Pin every FROM to a version tag (\`node:22-alpine\`, \`python:3.13-slim\`), never \`latest\` and never an untagged image."
   fi

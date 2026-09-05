@@ -89,15 +89,23 @@ printf '%s' "$OUTPUT" | jq -e '.user_message and .agent_message' >/dev/null || f
 [ "$(run '{"file_path":"/repo/src/index.ts","conversation_id":"t"}' beforeReadFile | permission)" = "allow" ] || fail "source read must be allowed"
 
 mkdir -p "$TMP/proj/src/services"
-[ "$(run "{\"tool_name\":\"edit_file\",\"tool_input\":{\"target_file\":\"$TMP/proj/src/services/c.ts\",\"code_edit\":\"const c = 1; // $EM_DASH\"},\"workspace_roots\":[\"$TMP/proj\"],\"conversation_id\":\"pre\"}" preToolUse no-em-dash | permission)" = "deny" ] || fail "preToolUse must deny an em dash in an edit-shaped payload"
+# Built with jq -n and assigned before testing: bash 3.2 (the system bash on
+# some machines) mis-tokenizes a $(...) whose argument is a double-quoted
+# string with backslash-escaped inner quotes when that $(...) sits directly
+# inside a `[ ... ]` test.
+PRE_TOOL_PAYLOAD=$(jq -nc --arg f "$TMP/proj/src/services/c.ts" --arg c "const c = 1; // $EM_DASH" --arg root "$TMP/proj" '{tool_name:"edit_file", tool_input:{target_file:$f, code_edit:$c}, workspace_roots:[$root], conversation_id:"pre"}')
+PRE_TOOL_DECISION=$(run "$PRE_TOOL_PAYLOAD" preToolUse no-em-dash | permission)
+[ "$PRE_TOOL_DECISION" = "deny" ] || fail "preToolUse must deny an em dash in an edit-shaped payload"
 [ "$(run '{"tool_name":"run_terminal_cmd","tool_input":{"command":"ls"},"conversation_id":"pre"}' preToolUse no-em-dash | permission)" = "allow" ] || fail "preToolUse must leave shell payloads to beforeShellExecution"
 
 # Edit gates without a pre-edit event: the finding is deferred to stop, once.
 run "{\"file_path\":\"$TMP/proj/src/services/a.ts\",\"edits\":[{\"old_string\":\"\",\"new_string\":\"const a = 1; // $EM_DASH\\n\"}],\"workspace_roots\":[\"$TMP/proj\"],\"conversation_id\":\"edit\"}" afterFileEdit no-em-dash >/dev/null
 [ -s "$CLAUDE_CURSOR_STATE_DIR/edit.findings" ] || fail "afterFileEdit did not record the em-dash finding"
-FOLLOWUP=$(run "{\"status\":\"completed\",\"workspace_roots\":[\"$TMP/proj\"],\"conversation_id\":\"edit\"}" stop | jq -r '.followup_message // ""')
+STOP_PAYLOAD=$(jq -nc --arg root "$TMP/proj" '{status:"completed", workspace_roots:[$root], conversation_id:"edit"}')
+FOLLOWUP=$(run "$STOP_PAYLOAD" stop | jq -r '.followup_message // ""')
 printf '%s' "$FOLLOWUP" | grep -q 'no-em-dash hook BLOCKED' || fail "stop did not surface the deferred finding as followup_message"
-[ "$(run "{\"status\":\"completed\",\"workspace_roots\":[\"$TMP/proj\"],\"conversation_id\":\"edit\"}" stop)" = "{}" ] || fail "a consumed finding must not be surfaced twice"
+SECOND_STOP=$(run "$STOP_PAYLOAD" stop)
+[ "$SECOND_STOP" = "{}" ] || fail "a consumed finding must not be surfaced twice"
 [ "$(run '{"status":"aborted","workspace_roots":["/tmp"],"conversation_id":"edit"}' stop)" = "{}" ] || fail "an aborted turn must not run the stop gates"
 
 # A stop gate that keeps failing is surfaced once, suppressed on the identical
