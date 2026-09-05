@@ -25,6 +25,8 @@ todos/
 # Per-session user uploads: arbitrary user-supplied files (photos, documents,
 # screenshots) keyed by session id. Never publishable (R-106).
 uploads/
+# Per-conversation findings and debug log written by cursor/hooks/claude-hook-adapter.sh
+.cursor-hook-state/
 
 # Local settings (may contain secrets / machine-specific permissions)
 settings.local.json

@@ -119,6 +119,13 @@ The design goal is to migrate prose down to mechanical as enforcement paths get 
 │   ├── rules/                       # 7 custom ESLint rules (R-319, R-316/317, R-320, R-325, R-342, R-343, R-344).
 │   └── tests/                       # 43 fixture tests; run-tests.sh runs them all.
 ├── .github/workflows/enforce.yml    # CI: both fixture suites + the ratchet.
+├── cursor/                          # The Cursor port. See cursor/README.md.
+│   ├── build.mjs                    # Renders rules/, agents/, commands/, skills/ from the sources above.
+│   ├── hooks.json                   # Cursor hook wiring: every event calls the adapter.
+│   ├── hooks/claude-hook-adapter.sh # Cursor <-> Claude Code hook protocol; runs hooks/*.sh unchanged.
+│   ├── install.sh                   # Symlinks ~/.cursor/{rules,hooks.json,agents,commands,skills} here.
+│   ├── PORT-STATUS.md               # Generated: which hooks and permission layers port, and why not.
+│   └── rules/                       # Generated .mdc rules: 3 always-on, 9 glob-attached, 13 on demand.
 ├── rules/                           # Auto-load zone: session-types.md + path-scoped
 │   │                                # symlinks to the stack CLAUDE-*.md files.
 ├── rulebook/                        # Tier-2 rule files loaded by session type.
@@ -211,6 +218,10 @@ In order:
 4. **[`agents/audit-engineering.md`](./agents/audit-engineering.md), [`agents/audit-security.md`](./agents/audit-security.md), [`agents/audit-criticism.md`](./agents/audit-criticism.md)**: the three standing audit role definitions, co-located with the agent frontmatter that Claude Code's Agent runtime loads at dispatch. The mirror files under `audits/` are pointers; the agent files are canonical. On-request roles (Customer, Design, UX, Financial, Legal, Marketing) live alongside as `agents/audit-<role>.md`.
 5. **[`hooks/`](./hooks/)** and **[`enforce/README.md`](./enforce/README.md)**: the actual enforcement layer. Each hook is self-documenting in its header comment; `enforce/README.md` covers the rule manifest, the naming lexicon, the ratchet, and how to add a rule.
 6. **[`docs/session-handoff/session-handoff.md`](./docs/session-handoff/)**: the most recent handoff, and the cheapest way to understand current state. Dated audit reports live in [`docs/audits/`](./docs/audits/).
+
+## Using the same rules from Cursor
+
+`cursor/` is this configuration in the shapes Cursor reads: `.mdc` rules (always-on, glob-attached, or agent-requested), a `hooks.json`, subagents, slash commands, and two skill overrides. `cursor/build.mjs` generates all of it from the canonical files, so every rule is still written once, and `enforce/tests/cursor-port.test.sh` fails the suite when the port is stale. The hooks run unchanged: `cursor/hooks/claude-hook-adapter.sh` turns each Cursor hook event into the Claude Code payload the scripts already read and turns their decisions back into Cursor's response, so 38 of the 42 hooks, plus the `Bash(...)` and `Read(...)` permission rules from `settings.json`, enforce under Cursor as well. `bash ~/.claude/cursor/install.sh` points `~/.cursor` at the port. Fidelity per event and the caveats (Cursor has no pre-edit hook, so the edit gates report through the stop hook instead of blocking) are in [`cursor/README.md`](./cursor/README.md); the per-hook table is [`cursor/PORT-STATUS.md`](./cursor/PORT-STATUS.md).
 
 ## Running this repo on your own machine
 

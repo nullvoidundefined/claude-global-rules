@@ -81,3 +81,22 @@ suites, then `package.json` `test` plus `typecheck`/`type-check`, then
   wins over all discovery, so per-project commands never belong in the hook.
 - `CLAUDE_SKIP_VERIFY=1` bypasses for one turn. `CLAUDE_VERIFY_TIMEOUT` (default
   600s) caps each command.
+
+## Cursor
+
+The same rules and hooks are available to Cursor from `cursor/`, generated from
+the files above by `node cursor/build.mjs --write`. After the install steps:
+
+```
+bash ~/.claude/cursor/install.sh
+```
+
+symlinks `~/.cursor/rules`, `~/.cursor/hooks.json`, `~/.cursor/agents`,
+`~/.cursor/commands`, and `~/.cursor/skills` into the port, refusing to replace
+anything it did not create. Restart Cursor and check Settings > Rules and
+Settings > Hooks. If this Cursor build does not read a user-level rules
+directory, `bash ~/.claude/cursor/install.sh --project <repo>` copies the rules
+and `hooks.json` into that repo's `.cursor/` instead. Skills load from
+`~/.claude/skills/` without any copy. `cursor/README.md` carries the per-event
+fidelity table and the caveats; `cursor/PORT-STATUS.md` the per-hook table.
+
