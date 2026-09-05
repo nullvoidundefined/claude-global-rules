@@ -77,7 +77,7 @@ export function currentR001Line(source) {
 // port runs keeps its tag, one it cannot run is labelled so the rule is known
 // to depend on recall under that tool.
 export function annotateEnforcerTags(body, portedHookNames, toolName) {
-  return body.replace(/\[([^\]\n]*)\]$/gm, (whole, inner) =>
+  return body.replace(/\[([^\]\n]*)\]$/gm, (_whole, inner) =>
     `[${inner.replace(/hook:([a-z0-9-]+)/g, (tag, name) => (portedHookNames.has(name) ? tag : `${tag} in Claude Code; manual in ${toolName}`))}]`,
   );
 }
@@ -256,8 +256,14 @@ export function renderPortReadme({ builder, targetName, toolName, repoName }) {
 
 // --- driver -----------------------------------------------------------------------
 
-function sha256(text) {
-  return createHash("sha256").update(text).digest("hex");
+// A bare 64-character hex string sitting as a JSON value is a well-known
+// false-positive shape for generic secret scanners (GitGuardian's "apikey"
+// detector flagged one in this exact manifest, 2026-09-06: the hash of a
+// rules file, not a credential). The "sha256:" prefix is the same convention
+// npm and other lockfiles use for integrity hashes, and reads unambiguously
+// as a checksum to both a scanner and a human.
+function contentDigest(text) {
+  return `sha256:${createHash("sha256").update(text).digest("hex")}`;
 }
 
 function readManifest(outDir) {
@@ -328,7 +334,7 @@ export function runPortBuild({ builder, files, outDir, mode, force = false }) {
     mkdirSync(dirname(full), { recursive: true });
     writeFileSync(full, content);
     if (path.endsWith(".sh")) chmodSync(full, 0o755);
-    written[path] = sha256(content);
+    written[path] = contentDigest(content);
   }
   let removed = 0;
   let kept = [];
@@ -336,7 +342,7 @@ export function runPortBuild({ builder, files, outDir, mode, force = false }) {
     if (path in files) continue;
     const full = join(outDir, path);
     if (!existsSync(full)) continue;
-    if (sha256(readFileSync(full, "utf8")) === manifest.files[path]) {
+    if (contentDigest(readFileSync(full, "utf8")) === manifest.files[path]) {
       rmSync(full);
       removed += 1;
     } else {

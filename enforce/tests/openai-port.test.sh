@@ -33,6 +33,10 @@ EM_DASH=$(printf '\xe2\x80\x94')
 # 1. The build.
 node "$ROOT/openai/build.mjs" --write --out "$OUT" >/dev/null 2>"$TMP/err" || fail "build failed: $(head -3 "$TMP/err")"
 [ -f "$OUT/.claude-port.json" ] || fail "no manifest written"
+# A bare 64-char hex hash as a JSON value is a well-known false-positive shape
+# for generic secret scanners (GitGuardian flagged one, 2026-09-06); every
+# manifest entry must carry the sha256: prefix instead.
+jq -e '[.files[] | select(test("^sha256:[0-9a-f]{64}$") | not)] | length == 0' "$OUT/.claude-port.json" >/dev/null || fail "manifest hash values must be prefixed sha256: to avoid looking like a bare secret"
 node "$ROOT/openai/build.mjs" --check --out "$OUT" >/dev/null 2>&1 || fail "--check fails right after --write"
 mkdir -p "$TMP/taken" && printf '# mine\n' >"$TMP/taken/AGENTS.md"
 node "$ROOT/openai/build.mjs" --write --out "$TMP/taken" >/dev/null 2>&1 && fail "--write must refuse a target holding an AGENTS.md it did not write"
