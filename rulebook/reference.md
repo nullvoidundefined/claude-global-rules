@@ -514,7 +514,7 @@ R-508: Update `README.md` in the same commit when adding a user-facing feature, 
 
 R-509: Target changed files only in per-commit test runs; run the full suite at pre-push.
   Spec: the turn-level gate is `hooks/verification-gate.sh`, a Stop hook. It runs only when the working tree is dirty or the branch carries unpushed commits, so a read-only turn costs nothing. Command discovery, first match wins: `.claude/verify.sh`, then the `~/.claude` repo's own two fixture suites, then `package.json` `test` plus `typecheck`/`type-check`, then `pytest`/`mypy`, then `go test`/`go vet`, then `bundle exec rspec`. A repo with no discoverable command is not blocked. Bypass for one turn with `CLAUDE_SKIP_VERIFY=1`; per-project commands belong in `.claude/verify.sh`, never hardcoded in the hook.
-  Enforcement: hook:verification-gate (blocks the Stop with the failing command's real output); manual for the changed-file scoping at commit time
+  Enforcement: hook:verification-gate (blocks the Stop with the failing command's real output; registered on SubagentStop as well since 2026-09-06, skipping only the roles `enforce/role-policy.json` marks `deny: ["any"]`, which write nothing and cannot fix a red tree); manual for the changed-file scoping at commit time
 
 R-510: Trust pre-commit hooks for what they cover; do not manually re-run the format/lint/build steps they already run.
   Scope: build/lint/test gates a project defines (project `CLAUDE.md`) still apply, as does the pre-push/CI full sweep (R-408, R-509).

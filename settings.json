@@ -338,6 +338,19 @@
         ]
       }
     ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/verification-gate.sh",
+            "timeout": 660,
+            "statusMessage": "Running project checks before the subagent returns"
+          }
+        ]
+      }
+    ],
     "Notification": [
       {
         "matcher": "",
