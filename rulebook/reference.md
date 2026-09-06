@@ -327,6 +327,7 @@ R-330: Settle the domain vocabulary during spec writing, before naming propagate
   - The spec is incomplete until it carries a `## Domain vocabulary` section, each domain noun written as `term - meaning - chosen over: <alternatives> because <reason>`.
   - All file, function, and type naming conforms to that glossary.
   - Prefer domain-precise terms over evocative metaphors unless a framework makes the metaphor standard (ECS `World`, Cucumber `World`).
+  Spec (2026-09-06): the spec also carries `## Acceptance criteria` (one numbered behavior per line, `B-1`, `B-2`, each a slice R-412 runs as RED then GREEN) and `## Non-goals`; the full heading set with each heading's intent is `prompts/spec-template.md`, and `spec-grounding` adds the missing headings when it rewrites an external spec.
   Enforcement: hook:spec-glossary-check (advisory)
 
 ### Observability (R-34x)

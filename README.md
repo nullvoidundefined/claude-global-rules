@@ -141,7 +141,8 @@ The design goal is to migrate prose down to mechanical as enforcement paths get 
 │   ├── structure-conventions/       # The conditional R-3xx rules, off the always-loaded path.
 │   └── ...                          # bug-hunt, feature-create, task-cleanup, etc.
 ├── prompts/
-│   └── subagent-branch-setup.md     # Reusable worktree snippet for agent dispatches.
+│   ├── subagent-branch-setup.md     # Reusable worktree snippet for agent dispatches.
+│   └── spec-template.md             # The fixed spec headings the slice loop reads from.
 ├── global-memory/                   # Cross-project lessons and running logs.
 │   ├── INDEX.md                     # Entry point. Auto-loaded by SessionStart.
 │   ├── feedback_*.md                # Calibration memories: how to collaborate.
