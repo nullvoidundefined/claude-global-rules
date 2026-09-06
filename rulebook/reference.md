@@ -444,6 +444,37 @@ R-408: Lint/format staged files only in pre-commit hooks; run full sweeps in pre
 R-409: Diagnose repeated formatting cleanups as a failed pre-commit hook before committing again.
   Enforcement: manual
 
+R-410: Never write a gate input, nor a locked test, fixture, or spec path once a slice is red.
+  Scope: gate inputs are `.claude/verify.sh`, `.enforce.json`, `.enforce-baseline.json`, and `.claude/tdd-lock.json`; locked paths are every test tree (the `tests` pattern in `enforce/role-policy.json`), the `tests[].path` entries and `locked[]` prefixes in the lock, and the spec named at `tdd.sh open`. Paths outside the repository root are not governed.
+  Spec:
+  - A gate input changes outside the session, or the session tells the user what must change and why; never by a tool call.
+  - From `tdd.sh red` until `tdd.sh close`, the tests are the contract: the implementation changes to satisfy them, never the reverse.
+  - A test believed wrong is returned as `DISPUTE: <test id>: <why>`; the session stops; the user decides; any change is a new RED written by the test author.
+  - A new behavior is a new slice (`tdd.sh close`, then `tdd.sh open`), never an edit to the current slice's tests.
+  - Test-runner configs (`vitest.config.*`, `jest.config.*`, `playwright.config.*`, `pytest.ini`, `.rspec`) and the `package.json` `test`/`typecheck` scripts ask before changing.
+  - An unreadable lock fails closed: every write is denied until the user repairs or deletes the lock outside the session.
+  Enforcement: hook:protected-path-guard (denies Write and Edit by root-relative path; denies Bash by its write targets: redirections, `tee`, and every path operand of `rm`, `mv`, `cp`, `shred`, `truncate`, `unlink`, `sed -i`, `git rm|mv|checkout|restore|clean|stash`); `enforce/tdd.sh green` compares locked-file hashes against the lock and the RED commit for anything a regex cannot see (an interpreter writing from its own source)
+
+R-411: Subagent roles write only inside their boundary.
+  Scope: subagent tool calls, identified by the `agent_type` field in the hook input; the main session and any agent type absent from `enforce/role-policy.json` carry no role restriction (R-410 and R-412 still apply).
+  Spec:
+  - `test-author`: writes test and fixture trees only (`allow: tests`); reports a missing interface in its summary rather than creating it.
+  - `implementer`: writes anything except test trees, fixtures, specs, and the lock (`deny: tests, specs, lock`).
+  - `slice-critic`: writes nothing (`deny: any`); returns findings and candidate tests as prose.
+  - Roles and patterns are data in `enforce/role-policy.json`; a new role is a new key, not a hook change.
+  Enforcement: hook:protected-path-guard (reads `agent_type`; `disallowedTools` in the agent frontmatter is the belt to this hook's braces for the critic)
+
+R-412: Work in slices, each one behavior: open, failing test, red, implementation, green, close.
+  Scope: every tier above Trivial (2026-09-06 decision 3); Standard runs it in one session, Complex and Saga dispatch the test author and implementer as separate agents.
+  Spec, in order:
+  1. `bash ~/.claude/enforce/tdd.sh open "<slice>" [--spec <path>]` writes the lock in phase `open`: production paths are read-only, test and spec paths are writable.
+  2. Write the failing test for this one behavior.
+  3. `tdd.sh red <test file...>`: the named tests must fail for an assertion or missing-module reason (a syntax error in the test, no tests found, or a skip is rejected); the rest of the suite must be green; the pass count and the test-file hashes are recorded and the phase becomes `red`: test paths are read-only, production opens up.
+  4. Write the minimum implementation. `tdd.sh green`: the named tests pass, the suite count is at or above the baseline, the hashes match the lock and the RED commit; phase becomes `green`.
+  5. Refactor under the same lock; `tdd.sh green` again if anything changed.
+  6. Commit; `tdd.sh close` removes the lock. The RED commit (`test:`) precedes the GREEN commit (`feat:`, `fix:`, or `refactor:`).
+  Enforcement: hook:protected-path-guard (phase-aware: `open` denies production writes, `red` and `green` deny test writes); opening the slice is the manual step the skills instruct
+
 ## Git and process (R-5xx)
 
 R-501: Check for a parallel session on the same working tree before the first edit; if one is active, move to a worktree.

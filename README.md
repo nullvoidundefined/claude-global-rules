@@ -103,6 +103,7 @@ The design goal is to migrate prose down to mechanical as enforcement paths get 
 │   ├── session-start.sh             # SessionStart. Auto-loads INDEX + handoff doc.
 │   ├── session-end.sh               # SessionEnd. Routes fire/miss entries to logs.
 │   ├── verification-gate.sh         # Stop. Blocks the turn on a red test/typecheck run.
+│   ├── protected-path-guard.sh      # PreToolUse. Locks tests, fixtures, specs, and gate inputs per slice and role.
 │   ├── install-git-hooks.sh         # Installs pre-push.sample into .git/hooks.
 │   ├── pre-push.sample              # Tracked pre-push: a red suite aborts the push.
 │   ├── tests/                       # 12 fixture tests for the lifecycle hooks.
