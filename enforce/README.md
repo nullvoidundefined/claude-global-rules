@@ -103,6 +103,10 @@ Two custom rules under `rules/`, active only in test trees. `no-self-mock` repor
 
 `role-policy.json` is data: `patterns` are extended regexes over the root-relative path, `roles` map an `agent_type` to an `allow` or `deny` list of pattern names. A new role is a new key.
 
+## The dependency guard (R-331)
+
+`hooks/dependency-add-guard.sh` runs on every Write and Edit and exits at once unless the file is `package.json`, `pyproject.toml`, `go.mod`, or a `Gemfile`. For those it hands the payload to `hooks/dependency-add-scan.py`, which parses the file on disk and the file as it will be after the write (an Edit is applied as the Edit tool applies it, first occurrence) and prints the dependency names the write adds: package.json dependency tables, PEP 508 names in `[project]` and `[dependency-groups]`, poetry tables minus `python`, direct Go requires, `gem` lines. Any added name asks, naming the packages; a version change, a removal, a lockfile, or an unparsable result is silent. Fixture: `tests/dependency-add-guard.test.sh`.
+
 ## The naming lexicon (R-316, R-317)
 
 "Is this a good name" is undecidable. "Is this verb in the lexicon" is set membership. `lexicon.json` is that set, so the check is a pure function of `(AST, config)` and gives the same verdict on every machine and every run.

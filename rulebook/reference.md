@@ -330,6 +330,14 @@ R-330: Settle the domain vocabulary during spec writing, before naming propagate
   Spec (2026-09-06): the spec also carries `## Acceptance criteria` (one numbered behavior per line, `B-1`, `B-2`, each a slice R-412 runs as RED then GREEN) and `## Non-goals`; the full heading set with each heading's intent is `prompts/spec-template.md`, and `spec-grounding` adds the missing headings when it rewrites an external spec.
   Enforcement: hook:spec-glossary-check (advisory)
 
+R-331: Justify every new third-party dependency before adding it.
+  Scope: `package.json` (dependencies, devDependencies, peerDependencies, optionalDependencies), `pyproject.toml` (`[project]` dependencies and optional-dependencies, `[dependency-groups]`, poetry dependency tables), `go.mod` (direct `require` lines), `Gemfile` (`gem` lines). Lockfiles, version changes, removals, and `// indirect` Go requires are not judged.
+  Spec:
+  - Before adding a package, search `services/`, `clients/`, and the packages already present (R-308); the spec's `## Dependencies` section names every package the feature needs and why (`prompts/spec-template.md`).
+  - The ask names the added packages; confirming it is the justification on record for that turn. An implementer subagent that hits the ask has left its slice: the spec did not name the package, so it returns the need to the user instead of confirming.
+  - A dependency the spec names is still asked about once; the cost is one prompt per deliberate addition.
+  Enforcement: hook:dependency-add-guard (asks on a Write or Edit whose result carries a dependency name the file on disk lacks; an Edit is judged on the file after the replacement; `hooks/dependency-add-scan.py` parses; an unparsable result fails open)
+
 ### Observability (R-34x)
 
 R-341: Give every inbound request one request ID and carry it everywhere that request causes work.
