@@ -127,7 +127,7 @@ R-303: Make dependencies flow one direction: higher layers import lower, never t
   - Backend `handlers -> services -> repositories -> clients/db`; frontend `components -> hooks -> services/clients`.
   - No upward imports, no layer skip that inverts flow, no circular imports between modules.
   - Per-stack specifics in `CLAUDE-BACKEND.md` and `CLAUDE-FRONTEND.md`. Enforce per project: `import/no-cycle` and `import/no-restricted-paths` (TypeScript), import-linter contracts (Python).
-  Enforcement: eslint:no-restricted-paths
+  Enforcement: eslint:no-restricted-paths; eslint:no-cycle (circular imports in every tree, maxDepth 8, since 2026-09-06)
 
 R-304: Use the fixed top-level vocabulary in the Express server's `src/`, one responsibility each.
   Scope: extends R-306 and R-311.
@@ -365,7 +365,7 @@ R-344: Never swallow an error.
   - A `catch` binds the error and references it: log with `{ err }` and the request ID, report to the error tracker when the failure is unexpected, then return an error response or rethrow with the original as `cause`.
   - Expected failures (a cache miss, a 404 from a provider) log at `debug` or `warn` and return a defined fallback; they are still bound and referenced.
   - The global error handler is the one place an unexpected error becomes a 500, and it reports before it responds.
-  Enforcement: eslint:no-empty (`allowEmptyCatch: false`); eslint:no-swallowed-catch (decides an unbound `catch` and a bound-but-unreferenced error; what the block does with the error is not decidable and stays manual); ruff:E722, ruff:S110, ruff:BLE001 (Python analogs; a blind except that re-raises passes); golangci:errcheck, golangci:errorlint (Go analogs); rubocop:Lint/SuppressedException (Ruby analog)
+  Enforcement: eslint:no-empty (`allowEmptyCatch: false`); eslint:no-swallowed-catch (decides an unbound `catch` and a bound-but-unreferenced error; what the block does with the error is not decidable and stays manual); ruff:E722, ruff:S110, ruff:BLE001 (Python analogs; a blind except that re-raises passes); golangci:errcheck, golangci:errorlint (Go analogs); rubocop:Lint/SuppressedException (Ruby analog); the two catch rules also cover every `src/services` and `src/clients` tree outside a server root since 2026-09-06 (swallowing an error is not a server-only defect)
 
 R-345: Expose liveness and readiness probes on every service and worker.
   Spec:
@@ -412,7 +412,7 @@ R-401: Write tests that fail when the implementation is wrong; prefer behavior a
     7. Loose-shape-only assertion on a value-computing function.
     8. `it.skip(...)` without reason and triage ID.
     9. Persistently red tests: fix or delete. Never `test.fixme`/`test.skip`/`it.skip`/`xit`/`xtest` to suppress a failing test; a test that cannot pass is deleted, not deferred, and re-added when the capability exists.
-  Enforcement: hook:content-gate (anti-patterns 8 and 9 only: `.only` is denied outright, a skip is denied unless its line names a triage ID; the other seven stay judge-tier and manual)
+  Enforcement: hook:content-gate (anti-patterns 8 and 9: `.only` is denied outright, a skip is denied unless its line names a triage ID); eslint:no-self-mock (items 1 and 5 in test trees: a `vi.mock`/`jest.mock` of the module the test file is named for, and a repository test mocking the pool); eslint:behavior-assertion-required (item 3: a test whose only `expect()` matchers are mock-call matchers); items 2, 4, 6, and 7 stay with the slice critic's question 4 and the judge
 
 R-403: Follow the bug-fix path in order; fix bugs test-first.
   Scope: exception for test-resistant failures (races, hardware, prod-only env): document, fix, manually verify, log a `tech-debt:` note.

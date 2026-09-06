@@ -35,7 +35,7 @@ R-209: Delete filler before sending: action announcements, question echoes, tran
 
 R-301 [ts]: Lay out pnpm monorepos in the canonical shape: `apps/server`, `apps/client/<surface>`, `packages/*` under the project-agnostic `@repo/*` scope; never rename or rescope an included surface. [manual]
 R-302: Keep each project an independent git repo; shared code publishes as versioned packages, never cross-project relative imports. [hook:content-gate]
-R-303: Dependencies flow one direction (backend `handlers -> services -> repositories -> clients/db`; frontend `components -> hooks -> services/clients`); no upward, layer-skipping, or circular imports. [eslint:no-restricted-paths]
+R-303: Dependencies flow one direction (backend `handlers -> services -> repositories -> clients/db`; frontend `components -> hooks -> services/clients`); no upward, layer-skipping, or circular imports. [eslint:no-restricted-paths, eslint:no-cycle]
 R-306: Never create catch-all dirs (`lib`, `utils`, `helpers`, `common`, `core`, `misc`, `shared`); function-only modules go to `services/` (business logic), `clients/` (third-party wrappers), or `api/` (own-backend fetch wrappers). [hook:structure-gate]
 R-307: `services/` by domain then operation; `clients/` one thin module per provider, no domain logic; `api/` one fetch wrapper per route; co-locate non-code assets; export only what is imported elsewhere. [manual]
 R-308: Search the existing `services/`, `clients/`, and hook trees before adding any new unit of business logic; reuse or extend first; ask before modifying shared code. [manual]
@@ -63,7 +63,7 @@ R-351: Dockerize every deployable artifact from its first commit: one `Dockerfil
 
 ## Testing and quality (R-4xx)
 
-R-401: Write tests that fail when the implementation is wrong: behavior assertions over mock-call counts; rewrite the nine anti-patterns (reference.md) on sight; never skip or suppress a failing test: fix it or delete it. [hook:content-gate]
+R-401: Write tests that fail when the implementation is wrong: behavior assertions over mock-call counts; rewrite the nine anti-patterns (reference.md) on sight; never skip or suppress a failing test: fix it or delete it. [hook:content-gate, eslint:no-self-mock, eslint:behavior-assertion-required]
 R-403: Fix bugs test-first: write the failing test, confirm it FAILS, apply the smallest root-cause fix, confirm it PASSES, verify per R-509, commit test and fix together. [hook:fix-commit-requires-test]
 R-404: Reproduce failures locally before deploying. [manual]
 R-405: Fix root causes; never weaken the protection that surfaced the failure (CORS, CSP, rate limits, bcrypt rounds). [hook:content-gate]
