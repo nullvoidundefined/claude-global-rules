@@ -87,6 +87,9 @@ The design goal is to migrate prose down to mechanical as enforcement paths get 
 │   ├── audit-security.md            # CISO persona agent.
 │   ├── audit-criticism.md           # Devil's advocate agent.
 │   ├── spec-conformance-review.md   # Reviews a diff against a named spec file.
+│   ├── test-author.md               # Slice role: writes the failing test, proves RED.
+│   ├── implementer.md               # Slice role: minimum code to GREEN, never touches tests.
+│   ├── slice-critic.md              # Slice role: read-only fresh-context review, seven questions.
 │   └── audit-*.md                   # On-request audit agents (design, financial, etc.)
 ├── audits/                          # Standing audit role definitions.
 │   ├── engineering.md               # CTO persona. Tech debt, tests, CI, architecture.
@@ -131,7 +134,7 @@ The design goal is to migrate prose down to mechanical as enforcement paths get 
 │   └── cost.md                      # Cost discipline and model routing.
 ├── skills/                          # User-authored skills.
 │   ├── task-start/                  # Scope classification and workflow dispatch.
-│   ├── tdd-gated-dispatch/          # Write failing tests before dispatching sub-agents.
+│   ├── tdd-gated-dispatch/          # The slice loop: open, RED, GREEN, REFACTOR, REVIEW, close.
 │   ├── all-hands/                   # Weekly priorities scan across all audit roles.
 │   ├── gof/                         # Gang of Four review (PE, Security, Critic, Designer).
 │   ├── spec-grounding/              # Grounds an externally written spec in the codebase.
