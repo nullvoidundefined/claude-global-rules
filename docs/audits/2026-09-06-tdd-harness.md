@@ -294,3 +294,17 @@ Not built, by decision: a spec schema, an orchestrator, coverage thresholds, per
 - The hooks reference documents `agent_id` and `agent_type` as common fields present in subagent context; the design above depends on that field reaching a `PreToolUse` command hook for `Write`, `Edit`, and `Bash`. Confirm on the real build before step 1 lands: register a scratch hook that logs `jq -r '.agent_type // "none"'` and dispatch one subagent. If the field is absent, the role boundary falls back to the lock plus each agent's own `hooks:` frontmatter block (also documented), at the cost of the settings closure guards not seeing those registrations.
 - The `verification-gate.sh` output shape (`{decision: "block", reason}` and the `stop_hook_active` input field) is the shape the fixture proves the hook emits, and the harness has relied on it since 2026-09-04; the current hooks reference excerpt read for this assessment shows `continueConversation` and `additionalContext` instead. Confirm the Stop contract on the installed build before adding the `SubagentStop` registration, since a shape mismatch would fail open silently.
 - If a real project already runs coverage or mutation tooling outside `~/.claude`, H-6 is a wiring task rather than an addition.
+
+## Decisions (2026-09-06, Ian, asked one at a time)
+
+1. First stack: TypeScript on Vitest; `tdd.sh` classifies Vitest output first, other runners follow when a project exists.
+2. Plans carry complete code (`writing-plans` default): the test author receives the spec path and the task's behavior line only, never the plan's code blocks; the `tdd-gated-dispatch` rewrite strips code fences from what it hands the test author.
+3. Standard tier is enforced: `tdd.sh red` before any production edit, the lock active until `tdd.sh green`, in a single session.
+4. Claude Code is 2.1.251 or later: the guard keys on `agent_type`, with lock-only behavior when the field is absent (main session).
+5. Routing: test author and critic on Opus, implementer on Sonnet, for Complex and Saga; Standard stays on the active model.
+6. Specs come both through `brainstorming` and from outside via `spec-grounding`: the template lives in `prompts/spec-template.md`, the glossary hook checks the extra headings under `docs/superpowers/specs/`, and `spec-grounding` adds them when it rewrites an external spec.
+7. Disputes: the human arbitrates, always; a `DISPUTE:` return stops the session with the test, the claim, and the spec line; any change is a new RED by the test author.
+8. Gate inputs are rare edits: deny `.claude/verify.sh`, `.enforce.json`, `.enforce-baseline.json`, and the lock; ask on `package.json` test scripts and runner configs.
+9. Judge key still pending: R-401 anti-patterns 2, 4, 6, 7 are labelled critic-only in the rule text; self-mock and mock-only assertions become ESLint rules regardless.
+
+Superpowers stays as the process skeleton; `skills/tdd-gated-dispatch/SKILL.md` is rewritten as the integration point between `writing-plans` and `subagent-driven-development` rather than a new skill, and no Superpowers skill is forked into this repo.
