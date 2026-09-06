@@ -115,6 +115,8 @@ The design goal is to migrate prose down to mechanical as enforcement paths get 
 │   ├── eslintOptions.mjs            # Options shared by lint.mjs and ratchet.mjs.
 │   ├── lint.mjs                     # Lints any absolute path; used by the push gate.
 │   ├── ratchet.mjs                  # Full-tree baseline; fails when a count rises.
+│   ├── tdd.sh                       # Slice loop evidence: open, red, green, close.
+│   ├── role-policy.json             # Subagent write boundaries by agent_type (R-411).
 │   ├── judge-prompt.md              # Instructions for the semantic-rule judge.
 │   ├── hook-hashes.txt              # Integrity manifest for the enforcement surface.
 │   ├── rules/                       # 7 custom ESLint rules (R-319, R-316/317, R-320, R-325, R-342, R-343, R-344).
