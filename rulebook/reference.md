@@ -482,6 +482,7 @@ R-412: Work in slices, each one behavior: open, failing test, red, implementatio
   4. Write the minimum implementation. `tdd.sh green`: the named tests pass, the suite count is at or above the baseline, the hashes match the lock and the RED commit; phase becomes `green`.
   5. Refactor under the same lock; `tdd.sh green` again if anything changed.
   6. Commit; `tdd.sh close` removes the lock. The RED commit (`test:`) precedes the GREEN commit (`feat:`, `fix:`, or `refactor:`).
+  7. A behavior-preserving change has no RED: `tdd.sh open --refactor "<slice>" [--lock <test file>]...` requires the whole suite green, locks the named test files (every test file the suite ran when none is named), records the outside pass count, and starts in phase `refactor`, which locks tests like `red`; `tdd.sh green` then proves the same tests pass unchanged.
   Enforcement: hook:protected-path-guard (phase-aware: `open` denies production writes, `red` and `green` deny test writes); opening the slice is the manual step the skills instruct
 
 ## Git and process (R-5xx)
