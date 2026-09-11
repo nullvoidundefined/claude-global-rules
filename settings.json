@@ -117,6 +117,10 @@
           },
           {
             "type": "command",
+            "command": "~/.claude/hooks/protected-path-guard.sh"
+          },
+          {
+            "type": "command",
             "command": "~/.claude/hooks/global-repo-push-guard.sh"
           },
           {
@@ -193,6 +197,14 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/content-gate.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/protected-path-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/dependency-add-guard.sh"
           }
         ]
       },
@@ -330,6 +342,19 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/ntfy-notify.sh"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/verification-gate.sh",
+            "timeout": 660,
+            "statusMessage": "Running project checks before the subagent returns"
           }
         ]
       }

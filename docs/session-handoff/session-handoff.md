@@ -1,44 +1,39 @@
-# Session Handoff: 2026-09-05 Audit, Observability Rules, Decisions, Next Steps
+# Session Handoff: 2026-09-07 slice loop (PR #16) and dependency guard plus refactor mode (PR #17) merged
 
 ## 1. Last commit
 
-- `5a1d78c` chore(settings): record the four audit decisions (#13), on `main`. Before it: #12 (`2aaccbd`, hooks and human-in-the-loop), #11 (`a8b503c`, observability rules R-341 to R-346), #10 (`e744391`, the configuration audit and its remediation).
+- PR #17 (`feat(harness): R-331 dependency-add guard and tdd.sh open --refactor`) squash-merged to `main` on 2026-09-07, on top of PR #16 (`b908724`). `git log --oneline -2 main` shows both; no branch is open.
 
 ## 2. Production state
 
-- `main` is green in CI (`fixtures` required) through #12. Nothing on `main` is live in Ian's `~/.claude` until pulled; after the pull: `npm ci --prefix enforce` (lockfile changed twice), delete `~/.claude/.post-compact-pending` if present, and check `claude --version` (the `if`-gated hooks need 2.1.163 or later, the model-switch guard 2.1.251 or later; older builds ignore both).
-- Both suites: 43 enforcement fixtures, 12 hook fixtures. `hook-integrity-check.sh` silent. `npm audit` clean.
+- Both PRs merged with CI green: 47 enforcement fixtures, 12 hook fixtures, run against this checkout through a fake `$HOME` with a git identity. CI has not run on the branch yet (it runs on `pull_request` and `main`).
+- Nothing is live in Ian's `~/.claude` until the branch merges and is pulled. After the pull: `npm ci --prefix enforce` (the lockfile now carries `vitest` 5.0.0, pinned exact, as a devDependency for the live `tdd.sh` fixture), then `hooks/hook-integrity-check.sh` should be silent (the manifest was regenerated three times on the branch).
+- The judge key is still pending (decision 9); R-401 anti-patterns 2, 4, 6, 7 are critic-only until it lands.
 
 ## 3. What shipped
 
-- **Audit and remediation (#10):** `docs/audits/2026-09-04-config.md`; SessionEnd timeout; compaction re-injection via `SessionStart` matcher `compact`; `Read` deny rules for R-102 paths; one-entry allow list; `if`-gated git hooks; CI on the node24 action majors with Dependabot; ESLint 10 with `eslint-plugin-import-x`; `lint.mjs` resolves the repo root from the file (the fixture "flake" root cause); latency fixture reads `settings.json`; memoized verification gate; `settings-change-guard.sh` on `ConfigChange`; R-001 and INDEX rewrite.
-- **Observability (#11):** R-341 to R-346 with Spec blocks, backend and stack conventions, three custom ESLint rules plus `no-console` and `no-empty` scoped to server trees, ruff `T201`/`E722`/`S110`/`BLE001`, golangci `errcheck`/`errorlint` on a v2-schema config (the v1 file was silently rejected by v2 binaries, so the Go gate had enforced nothing), RuboCop `Lint/SuppressedException`, lexicon verbs `log`, `report`, `track`.
-- **Hooks and human-in-the-loop (#12):** `observability-reminder.sh` (advisory, R-341/R-345/R-346), `model-switch-guard.sh` (PreModelSwitch, asks on a switch up the price ladder), the judge returns `ask`, deploy and `gh pr create` ask rules.
-- **Decisions (this branch):** `model: opusplan`, `permissions.defaultMode: auto`, `code-review` and `code-simplifier` plugins off.
-- **Dockerization (branch `claude/dockerization-new-projects-cg12zd`):** R-351 under a new R-35x Deployment subsection: every deployable artifact Dockerized from its first commit (one Dockerfile per artifact, `.dockerignore`, compose, image as the deploy unit; libraries exempt). `hooks/dockerfile-reminder.sh` (advisory, PostToolUse Write|Edit) fires when an artifact marker lands with no Dockerfile up to the repo root, when a Dockerfile lacks a `.dockerignore`, and when a written Dockerfile runs as root or pulls an unpinned image. Containers sections in the backend, Python, Go, Ruby, Next, and Vite convention files; design doc `docs/superpowers/specs/2026-09-05-dockerization-rule-design.md`.
+- **PR #16 (merged):** the assessment, R-410 to R-412 with `hooks/protected-path-guard.sh` and `enforce/role-policy.json`, `enforce/tdd.sh`, the `SubagentStop` gate, the three role agents and the `tdd-gated-dispatch` rewrite (R-705, R-707), `prompts/spec-template.md` with the extended R-330 hook, and the test-quality, no-cycle, and catch-discipline ESLint rules.
+- **PR #17 (merged):** R-331 `hooks/dependency-add-guard.sh` plus `hooks/dependency-add-scan.py` (asks when a manifest gains a dependency name; 30-case fixture); `tdd.sh open --refactor` (green suite as the contract, phase `refactor`, guard treats it like `red`; fixture cases in both suites).
+- Decisions 10 to 16 recorded in the assessment's Decisions section.
 
 ## 4. Pending
 
-**Ian's next steps, in order (none of this is live until step 1):**
+**Ian, before anything else (both are one-command checks on the real build):**
 
-1. Pull and install: `cd ~/.claude && git pull origin main && npm ci --prefix enforce` (the lockfile changed twice: ESLint 10 and `eslint-plugin-import-x`).
-2. `rm -f ~/.claude/.post-compact-pending` (the retired sentinel; nothing writes it now).
-3. `claude --version`: the `if`-gated hooks need 2.1.163 or later and `model-switch-guard.sh` needs 2.1.251 or later; older builds ignore both, so run `claude update` if behind.
-4. Activate the naming judge (R-315 to R-317, silent since 2026-08-01). The hook reads `ANTHROPIC_API_KEY` from its environment, then the macOS keychain; project `.env` files are never read (R-102). Pick one:
-   - Keychain (current design, encrypted, macOS only): in a terminal outside any Claude session, `security add-generic-password -a "$USER" -s claude-judge-api-key -w`, paste the rotated key at the hidden prompt.
-   - `~/.claude/.env` (plaintext, cross-platform, the file the notifier already sources for `NTFY_TOPIC`): needs a one-line change so `llm-rule-judge.sh` sources it; ask for that PR.
-   - Shell profile `export ANTHROPIC_API_KEY=...`: works today, but puts the key in every process environment, which is how it reached a command line in April.
-   The judge bills the API key, not the subscription; a dedicated key keeps its spend visible.
-5. First session after the pull: `/status` should show `opusplan` and auto mode; `/skills` should no longer list the plugin `code-review` and `code-simplifier`; `/context` after a `/compact` in a throwaway session confirms the compact re-injection; `/doctor` answers whether `skipWorkflowUsageWarning` is a real key.
-6. First backend repo: `node ~/.claude/enforce/ratchet.mjs --update` and commit `.enforce-baseline.json`; expect the count to grow, since existing `console.log` and empty-catch debt is grandfathered rather than blocked.
+1. Confirm `agent_type` reaches a `PreToolUse` command hook: add a scratch hook that logs `jq -r '.agent_type // "none"'` and dispatch one subagent. If absent, R-411 falls back to lock-only and the agent files in step 4 need their own `hooks:` block.
+2. Confirm the Stop contract on the installed build still honors `{decision: "block", reason}` and `stop_hook_active` for `SubagentStop`; the current hooks reference excerpt shows `continueConversation` instead. A mismatch fails open silently.
 
-**Still open from earlier:** deleting stale merged remote branches (auto-delete is on now, so only old ones remain); the five deny-tier git guards still spawn on every Bash call (ISSUES.md, P2-5 residue); the `.env` deny enumerates variants rather than globbing, so any new secret-bearing `.env.*` name needs its own row (P1-4 residue).
+**Then:**
 
-**Not implemented by choice:** a `PermissionRequest` auto-decider and the sandbox; both encode policy only Ian can set.
+3. Pull `main` and `npm ci --prefix enforce` (Vitest is in the lockfile since PR #16).
+4. First real slice on a Vitest project: `tdd.sh open`, dispatch `test-author`, commit, dispatch `implementer`, `tdd.sh green`, dispatch `slice-critic`. Expect the first surprises in `tdd.sh red`'s failure classification, the guard's Bash target extraction, and the dependency guard's ask cadence; all three have fixtures to extend.
+5. Re-baseline by hand (decision 15): `node ~/.claude/enforce/ratchet.mjs --update` once in each repo carrying `.enforce-baseline.json`, read the new `import-x/no-cycle`, `catchDiscipline/*`, and `testQuality/*` counts, commit.
+
+**Deferred by decision:** pytest, go test, and RSpec runners in `tdd.sh` (decision 10); mutation testing on changed files (decision 11); the judge-tier extension (decision 9).
 
 ## 5. Next-session tasks, with files to read
 
-- **Before the first backend push,** read `enforce/README.md` ("The observability rules") so the new ESLint findings are recognized as R-342 to R-344 rather than noise.
-- **Watch the first `/model opus` switch** in a session for the R-903 prompt; if it fires on a switch that should be silent, `hooks/model-switch-guard.sh` ranks by substring and the fix is one line.
-- **Do not hand-edit the R-316 verb bullets** in `rulebook/reference.md`; regenerate from `enforce/lexicon.json`.
-- **When adding an enforcer,** R-516 binds: manifest row plus fixture; `settings-change-guard.sh` refuses a settings save that drops one.
+- Read `skills/tdd-gated-dispatch/SKILL.md` before the first slice; it is the operating procedure, and `docs/audits/2026-09-06-tdd-harness.md` is the rationale.
+- Read `hooks/protected-path-guard.sh` header and `enforce/tdd.sh` header before touching either; both state what they do not see (an interpreter writing from its own source) and why the GREEN hash check exists.
+- `enforce/role-policy.json` is the single place roles and path patterns live; a new role is a new key, and `tdd.sh red` validates test paths against the same `tests` pattern.
+- When adding an enforcer, R-516 binds: manifest row plus fixture; `hook-integrity-check.sh --update` now also covers `enforce/*.sh` and `role-policy.json`.
