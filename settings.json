@@ -113,6 +113,10 @@
           },
           {
             "type": "command",
+            "command": "~/.claude/hooks/codex-billing-guard.sh"
+          },
+          {
+            "type": "command",
             "command": "~/.claude/hooks/global-repo-push-guard.sh"
           },
           {
@@ -348,16 +352,6 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/settings-change-guard.sh"
-          }
-        ]
-      }
-    ],
-    "PreModelSwitch": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/model-switch-guard.sh"
           }
         ]
       }
