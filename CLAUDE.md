@@ -47,6 +47,7 @@ R-320: Write a file-level header comment on every new source file (skip tests, `
 R-322: Every function is exactly one of: an orchestrator that only sequences calls, or an atomic function doing one indivisible piece (~10 lines, ~25 ceiling). [hook:clean-code-reminder]
 R-325: Destructure when reading 2+ properties of an object; never destructure a method off its object. [eslint:destructure-object-reads, judge]
 R-330: Settle the domain vocabulary during spec writing; the spec carries a `## Domain vocabulary` glossary that all file, function, and type naming draws from. [hook:spec-glossary-check]
+R-332: Keep every comment true to the code beside it; when an edit removes, renames, or restructures what a comment describes, update or delete that comment in the same edit, never leave it describing code that no longer exists. [manual]
 
 ### Observability (R-34x)
 
